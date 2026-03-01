@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { deleteProvider, deleteBuyer, logContact } from '../lib/queries';
+import { deleteProvider, deleteBuyer, logContact, saveIntroductionOneSheet } from '../lib/queries';
+import { generateOneSheet } from '../lib/ai';
 import { Provider, Buyer } from '../types';
 import { ProviderCard } from '../components/ProviderCard';
+import { OneSheetOutput } from '../components/OneSheetOutput';
 
 interface TerritoryDetailProps {
   territoryId: string;
@@ -190,7 +192,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       animate={{ opacity: 1 }}
       className="col-span-2"
     >
-      <ProviderCard provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+      <ProviderCard provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} territoryName={territory?.name} />
     </motion.div>
   );
 
@@ -201,7 +203,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       animate={{ opacity: 1 }}
       className="col-span-2"
     >
-      <BuyerCardWithDelete buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+      <BuyerCardWithDelete buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} providers={providers} territoryName={territory?.name} />
     </motion.div>
   );
 
@@ -560,7 +562,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                   <button onClick={() => navigate('ADD_PROVIDER', { territoryId: territory?.id })} className="flex items-center gap-1 font-mono text-[10px] text-accent-green uppercase tracking-wider hover:text-accent-green/80 transition-colors"><Plus size={12} /> Add</button>
                 </div>
                 {providers.length > 0 ? providers.map(p => (
-                  <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                  <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} territoryName={territory?.name} />
                 )) : (
                   <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
                     <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
@@ -573,7 +575,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                   <button onClick={() => navigate('ADD_BUYER', { territoryId: territory?.id })} className="flex items-center gap-1 font-mono text-[10px] text-accent-green uppercase tracking-wider hover:text-accent-green/80 transition-colors"><Plus size={12} /> Add</button>
                 </div>
                 {buyers.map(b => (
-                  <BuyerCardWithDelete key={b.id} buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+                  <BuyerCardWithDelete key={b.id} buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} providers={providers} territoryName={territory?.name} />
                 ))}
               </div>
             </div>
@@ -642,7 +644,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                 {/* Desktop */}
                 <div className="hidden md:grid grid-cols-2 gap-4">
                   {relevantUnassigned.map(p => (
-                    <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                    <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} territoryName={territory?.name} />
                   ))}
                 </div>
               </>
@@ -659,9 +661,53 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 };
 
 // Inline buyer card with delete confirmation
-const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void; onLogContact: (id: string) => void; onClick?: () => void }> = ({ buyer, onDelete, onLogContact, onClick }) => {
+const BuyerCardWithDelete: React.FC<{ buyer: Buyer & { buyer_needs?: any[] }; onDelete: (id: string) => void; onLogContact: (id: string) => void; onClick?: () => void; providers?: Provider[]; territoryName?: string }> = ({ buyer, onDelete, onLogContact, onClick, providers = [], territoryName }) => {
   const [confirming, setConfirming] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+
+  // One-sheet state
+  const [oneSheetContent, setOneSheetContent] = useState<string | null>(null);
+  const [oneSheetLoading, setOneSheetLoading] = useState(false);
+  const [oneSheetError, setOneSheetError] = useState<string | null>(null);
+  const [oneSheetCopied, setOneSheetCopied] = useState(false);
+  const [showOneSheet, setShowOneSheet] = useState(false);
+
+  // Find matching provider: first active provider in same territory matching buyer's niche from buyer_needs
+  const buyerNiches = (buyer.buyer_needs || []).filter((n: any) => !n.filled).map((n: any) => n.niche?.toLowerCase());
+  const matchedProvider = providers.find(p => p.stage === 'active' && buyerNiches.includes(p.niche?.toLowerCase()));
+
+  const handleGenerateOneSheet = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!matchedProvider) return;
+    setShowOneSheet(true);
+    setOneSheetLoading(true);
+    setOneSheetError(null);
+    try {
+      const result = await generateOneSheet({
+        template: 'intro_buyer',
+        provider: matchedProvider,
+        buyer,
+        territory: territoryName,
+      });
+      setOneSheetContent(result);
+    } catch (err: any) {
+      setOneSheetError(err?.message || 'Failed to generate one-sheet');
+    } finally {
+      setOneSheetLoading(false);
+    }
+  };
+
+  const handleCopyOneSheet = async () => {
+    if (!oneSheetContent) return;
+    try {
+      await navigator.clipboard.writeText(oneSheetContent);
+      setOneSheetCopied(true);
+      setTimeout(() => setOneSheetCopied(false), 2000);
+    } catch {
+      console.error('Copy failed');
+    }
+  };
+
   return (
     <div onClick={onClick} className="bg-bg-card border border-border-subtle p-4 rounded-lg group hover:bg-bg-card-hover hover:border-border-hover transition-all cursor-pointer">
       <div className="flex justify-between items-start mb-2">
@@ -699,24 +745,48 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
           </button>
         </div>
       )}
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-center pt-2">
         <span className="font-mono text-[10px] text-text-muted uppercase">Last: {buyer.last_contact ? new Date(buyer.last_contact).toLocaleDateString() : 'Never'}</span>
-        <button
-          onClick={async (e) => {
-            e.stopPropagation();
-            try {
-              setContactError(null);
-              await onLogContact(buyer.id);
-            } catch {
-              setContactError('Failed to log');
-            }
-          }}
-          className="text-accent-blue hover:underline font-mono text-[10px] uppercase"
-        >Log Contact</button>
+        <div className="flex items-center gap-3">
+          {matchedProvider ? (
+            <button
+              onClick={handleGenerateOneSheet}
+              className="text-text-secondary hover:text-text-primary font-mono text-[10px] uppercase tracking-wider transition-colors"
+            >
+              ● one-sheet
+            </button>
+          ) : (
+            <span className="font-mono text-[9px] text-text-muted">no active provider in territory yet</span>
+          )}
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                setContactError(null);
+                await onLogContact(buyer.id);
+              } catch {
+                setContactError('Failed to log');
+              }
+            }}
+            className="text-accent-blue hover:underline font-mono text-[10px] uppercase"
+          >Log Contact</button>
+        </div>
       </div>
       {contactError && (
         <div className="mt-1">
           <span className="font-mono text-[10px] text-accent-red">{contactError}</span>
+        </div>
+      )}
+      {showOneSheet && (
+        <div onClick={e => e.stopPropagation()}>
+          <OneSheetOutput
+            content={oneSheetContent}
+            loading={oneSheetLoading}
+            error={oneSheetError}
+            copied={oneSheetCopied}
+            onRegenerate={() => handleGenerateOneSheet({ stopPropagation: () => { } } as any)}
+            onCopy={handleCopyOneSheet}
+          />
         </div>
       )}
     </div>

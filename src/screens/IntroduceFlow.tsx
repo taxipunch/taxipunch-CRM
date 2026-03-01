@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Download, Send, FileText, CheckCircle2, Copy, Check, Save } from 'lucide-react';
+import { ChevronLeft, Download, Send, FileText, CheckCircle2 } from 'lucide-react';
 import { generateOneSheets, generateOneSheet } from '../lib/ai';
-import { saveOneSheet } from '../lib/queries';
+import { saveOneSheet, saveIntroductionOneSheet } from '../lib/queries';
+import { OneSheetOutput } from '../components/OneSheetOutput';
 
 interface IntroduceFlowProps {
   context: any;
@@ -15,12 +16,17 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
   const [isGenerating, setIsGenerating] = useState(false);
   const [docs, setDocs] = useState<any>(null);
 
-  // One-sheet state
-  const [oneSheet, setOneSheet] = useState<string | null>(null);
-  const [generatingOneSheet, setGeneratingOneSheet] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  // Provider one-sheet state
+  const [providerSheet, setProviderSheet] = useState<string | null>(null);
+  const [providerSheetLoading, setProviderSheetLoading] = useState(false);
+  const [providerSheetError, setProviderSheetError] = useState<string | null>(null);
+  const [providerSheetCopied, setProviderSheetCopied] = useState(false);
+
+  // Buyer one-sheet state
+  const [buyerSheet, setBuyerSheet] = useState<string | null>(null);
+  const [buyerSheetLoading, setBuyerSheetLoading] = useState(false);
+  const [buyerSheetError, setBuyerSheetError] = useState<string | null>(null);
+  const [buyerSheetCopied, setBuyerSheetCopied] = useState(false);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -29,41 +35,65 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
     setIsGenerating(false);
   };
 
-  const handleGenerateOneSheet = async () => {
-    setGeneratingOneSheet(true);
-    const result = await generateOneSheet({
-      template: 'intro_buyer',
-      provider,
-      buyer,
-      territory: provider.territory_id || undefined,
-    });
-    setOneSheet(result);
-    setGeneratingOneSheet(false);
-  };
-
-  const handleCopy = async () => {
-    if (!oneSheet) return;
+  const handleGenerateProviderSheet = async () => {
+    setProviderSheetLoading(true);
+    setProviderSheetError(null);
     try {
-      await navigator.clipboard.writeText(oneSheet);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      console.error('Copy failed');
-    }
-  };
-
-  const handleSave = async () => {
-    if (!oneSheet || !provider?.id || !buyer?.id) return;
-    setSaving(true);
-    try {
-      await saveOneSheet(provider.id, buyer.id, niche, oneSheet);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error('Save failed:', err);
+      const result = await generateOneSheet({
+        template: 'intro_provider',
+        provider,
+        buyer,
+        territory: provider.territory_id || undefined,
+      });
+      setProviderSheet(result);
+      // Auto-save if introduction exists
+      if (context.introductionId) {
+        await saveIntroductionOneSheet(context.introductionId, result);
+      }
+    } catch (err: any) {
+      setProviderSheetError(err?.message || 'Failed to generate provider sheet');
     } finally {
-      setSaving(false);
+      setProviderSheetLoading(false);
     }
+  };
+
+  const handleGenerateBuyerSheet = async () => {
+    setBuyerSheetLoading(true);
+    setBuyerSheetError(null);
+    try {
+      const result = await generateOneSheet({
+        template: 'intro_buyer',
+        provider,
+        buyer,
+        territory: provider.territory_id || undefined,
+      });
+      setBuyerSheet(result);
+      if (context.introductionId) {
+        await saveIntroductionOneSheet(context.introductionId, result);
+      }
+    } catch (err: any) {
+      setBuyerSheetError(err?.message || 'Failed to generate buyer sheet');
+    } finally {
+      setBuyerSheetLoading(false);
+    }
+  };
+
+  const handleCopyProviderSheet = async () => {
+    if (!providerSheet) return;
+    try {
+      await navigator.clipboard.writeText(providerSheet);
+      setProviderSheetCopied(true);
+      setTimeout(() => setProviderSheetCopied(false), 2000);
+    } catch { console.error('Copy failed'); }
+  };
+
+  const handleCopyBuyerSheet = async () => {
+    if (!buyerSheet) return;
+    try {
+      await navigator.clipboard.writeText(buyerSheet);
+      setBuyerSheetCopied(true);
+      setTimeout(() => setBuyerSheetCopied(false), 2000);
+    } catch { console.error('Copy failed'); }
   };
 
   return (
@@ -96,31 +126,31 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr,350px] gap-12">
         <div className="space-y-8">
-          <div className="flex gap-4 border-b border-border-subtle">
+          <div className="flex gap-4 border-b border-border-subtle overflow-x-auto scrollbar-hide flex-nowrap">
             <button
               onClick={() => setActiveTab('BUYER')}
-              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative ${activeTab === 'BUYER' ? 'text-text-primary' : 'text-text-secondary'}`}
+              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative whitespace-nowrap ${activeTab === 'BUYER' ? 'text-text-primary' : 'text-text-secondary'}`}
             >
               1 · For the Buyer
               {activeTab === 'BUYER' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green" />}
             </button>
             <button
               onClick={() => setActiveTab('PROVIDER')}
-              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative ${activeTab === 'PROVIDER' ? 'text-text-primary' : 'text-text-secondary'}`}
+              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative whitespace-nowrap ${activeTab === 'PROVIDER' ? 'text-text-primary' : 'text-text-secondary'}`}
             >
               2 · For the Provider
               {activeTab === 'PROVIDER' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green" />}
             </button>
             <button
               onClick={() => setActiveTab('ONESHEET')}
-              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative ${activeTab === 'ONESHEET' ? 'text-text-primary' : 'text-text-secondary'}`}
+              className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative whitespace-nowrap ${activeTab === 'ONESHEET' ? 'text-text-primary' : 'text-text-secondary'}`}
             >
-              3 · One-Sheet
+              3 · One-Sheets
               {activeTab === 'ONESHEET' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green" />}
             </button>
           </div>
 
-          <div className="bg-bg-card border border-border-subtle rounded-2xl min-h-[400px] p-12 relative overflow-hidden">
+          <div className="bg-bg-card border border-border-subtle rounded-2xl min-h-[400px] p-6 md:p-12 relative overflow-hidden">
             <AnimatePresence mode="wait">
               {/* ===== BUYER / PROVIDER TABS ===== */}
               {(activeTab === 'BUYER' || activeTab === 'PROVIDER') && (
@@ -166,7 +196,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
                         </p>
                       </div>
 
-                      <div className="pt-12 border-t border-border-subtle grid grid-cols-2 gap-8">
+                      <div className="pt-12 border-t border-border-subtle grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                           <span className="font-mono text-[8px] text-text-muted uppercase block mb-2">Key Highlights</span>
                           <ul className="space-y-2">
@@ -204,70 +234,66 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
 
               {/* ===== ONE-SHEET TAB ===== */}
               {activeTab === 'ONESHEET' && (
-                <>
-                  {generatingOneSheet ? (
-                    <motion.div
-                      key="onesheet-loading"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 flex flex-col items-center justify-center gap-4"
+                <motion.div
+                  key="onesheet-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-8"
+                >
+                  <div>
+                    <h4 className="text-2xl mb-2">One-Sheet Briefs</h4>
+                    <p className="text-text-secondary text-sm">Generate casual, shareable introduction documents for both sides of the match.</p>
+                  </div>
+
+                  {/* Dual Generate Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={handleGenerateProviderSheet}
+                      disabled={providerSheetLoading}
+                      className="bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold px-4 py-2 rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 min-h-[44px]"
                     >
-                      <div className="w-12 h-12 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
-                      <p className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Generating one-sheet...</p>
-                    </motion.div>
-                  ) : oneSheet ? (
-                    <motion.div
-                      key="onesheet-content"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4"
+                      {providerSheetLoading ? 'generating...' : '● provider sheet'}
+                    </button>
+                    <button
+                      onClick={handleGenerateBuyerSheet}
+                      disabled={buyerSheetLoading}
+                      className="bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold px-4 py-2 rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 min-h-[44px]"
                     >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <FileText size={18} className="text-accent-blue" />
-                          <span className="font-mono text-[10px] text-text-muted uppercase tracking-widest">Introduction Brief</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleCopy}
-                            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase text-text-muted hover:text-text-primary transition-colors border border-border-subtle rounded-lg"
-                          >
-                            {copied ? <Check size={12} className="text-accent-green" /> : <Copy size={12} />}
-                            {copied ? 'Copied' : 'Copy'}
-                          </button>
-                          <button
-                            onClick={handleSave}
-                            disabled={saving || saved}
-                            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase text-text-muted hover:text-text-primary transition-colors border border-border-subtle rounded-lg disabled:opacity-50"
-                          >
-                            {saved ? <Check size={12} className="text-accent-green" /> : <Save size={12} />}
-                            {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="whitespace-pre-wrap text-sm text-text-secondary leading-relaxed">
-                        {oneSheet}
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-12 text-center">
-                      <div className="w-16 h-16 bg-bg-surface border border-border-subtle rounded-2xl flex items-center justify-center text-text-faint">
-                        <FileText size={32} />
-                      </div>
-                      <div>
-                        <h4 className="text-2xl mb-2">One-Sheet Brief</h4>
-                        <p className="text-text-secondary text-sm max-w-xs mx-auto">Generate a shareable introduction document connecting both parties with context and next steps.</p>
-                      </div>
-                      <button
-                        onClick={handleGenerateOneSheet}
-                        className="bg-accent-green text-bg-base font-mono text-xs font-bold px-8 py-3 rounded-full uppercase tracking-wider hover:scale-105 transition-transform"
-                      >
-                        Generate One-Sheet
-                      </button>
+                      {buyerSheetLoading ? 'generating...' : '● buyer sheet'}
+                    </button>
+                  </div>
+
+                  {/* Provider Sheet Output */}
+                  {(providerSheet || providerSheetLoading || providerSheetError) && (
+                    <div>
+                      <span className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-2 block">For {provider?.name}</span>
+                      <OneSheetOutput
+                        content={providerSheet}
+                        loading={providerSheetLoading}
+                        error={providerSheetError}
+                        copied={providerSheetCopied}
+                        onRegenerate={handleGenerateProviderSheet}
+                        onCopy={handleCopyProviderSheet}
+                      />
                     </div>
                   )}
-                </>
+
+                  {/* Buyer Sheet Output */}
+                  {(buyerSheet || buyerSheetLoading || buyerSheetError) && (
+                    <div>
+                      <span className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-2 block">For {buyer?.org_name}</span>
+                      <OneSheetOutput
+                        content={buyerSheet}
+                        loading={buyerSheetLoading}
+                        error={buyerSheetError}
+                        copied={buyerSheetCopied}
+                        onRegenerate={handleGenerateBuyerSheet}
+                        onCopy={handleCopyBuyerSheet}
+                      />
+                    </div>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -281,7 +307,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
                 "Confirm buyer urgency",
                 "Verify provider availability",
                 "Generate briefing docs",
-                "Generate one-sheet",
+                "Generate one-sheets",
                 "Send intro email",
                 "Log introduction in CRM"
               ].map((item, i) => (

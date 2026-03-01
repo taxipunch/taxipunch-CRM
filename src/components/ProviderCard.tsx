@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Provider } from '../types';
 import { Star, Phone, Globe, MapPin, ExternalLink, Trash2 } from 'lucide-react';
+import { generateOneSheet } from '../lib/ai';
+import { saveProviderOneSheet } from '../lib/queries';
+import { OneSheetOutput } from './OneSheetOutput';
 
 interface ProviderCardProps {
-  provider: Provider;
+  provider: Provider & { one_sheet?: string | null; territory_id?: string };
   onClick?: () => void;
   onDelete?: (id: string) => void;
   onLogContact?: (id: string) => void;
+  territoryName?: string;
+  openBuyerCount?: number;
 }
 
 const QualityDots: React.FC<{ score: number }> = ({ score }) => (
@@ -21,9 +26,52 @@ const QualityDots: React.FC<{ score: number }> = ({ score }) => (
   </div>
 );
 
-export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, onDelete, onLogContact }) => {
+export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, onDelete, onLogContact, territoryName, openBuyerCount }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+
+  // One-sheet state
+  const [oneSheetContent, setOneSheetContent] = useState<string | null>(provider.one_sheet || null);
+  const [oneSheetLoading, setOneSheetLoading] = useState(false);
+  const [oneSheetError, setOneSheetError] = useState<string | null>(null);
+  const [oneSheetCopied, setOneSheetCopied] = useState(false);
+  const [showOneSheet, setShowOneSheet] = useState(false);
+
+  const canGenerate = provider.stage === 'active' || provider.stage === 'bench';
+
+  const handleGenerateOneSheet = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowOneSheet(true);
+    setOneSheetLoading(true);
+    setOneSheetError(null);
+    try {
+      const template = provider.stage === 'bench' ? 'overflow_pitch' : 'provider_profile';
+      const result = await generateOneSheet({
+        template: template as any,
+        provider,
+        territory: territoryName,
+        openBuyerCount: template === 'overflow_pitch' ? (openBuyerCount || 0) : undefined,
+      });
+      setOneSheetContent(result);
+      // Auto-save
+      await saveProviderOneSheet(provider.id, result);
+    } catch (err: any) {
+      setOneSheetError(err?.message || 'Failed to generate one-sheet');
+    } finally {
+      setOneSheetLoading(false);
+    }
+  };
+
+  const handleCopyOneSheet = async () => {
+    if (!oneSheetContent) return;
+    try {
+      await navigator.clipboard.writeText(oneSheetContent);
+      setOneSheetCopied(true);
+      setTimeout(() => setOneSheetCopied(false), 2000);
+    } catch {
+      console.error('Copy failed');
+    }
+  };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -167,6 +215,27 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, o
           Stage: {provider.stage}
         </span>
         <div className="flex items-center gap-3">
+          {/* One-Sheet Button */}
+          {canGenerate ? (
+            <button
+              onClick={oneSheetContent && !showOneSheet
+                ? (e) => { e.stopPropagation(); setShowOneSheet(true); }
+                : handleGenerateOneSheet
+              }
+              className="text-text-secondary hover:text-text-primary font-mono text-[10px] uppercase tracking-wider transition-colors"
+            >
+              ● one-sheet
+            </button>
+          ) : (
+            <span className="relative group/tooltip">
+              <span className="text-text-muted cursor-not-allowed font-mono text-[10px] uppercase tracking-wider">
+                ● one-sheet
+              </span>
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-bg-card border border-border-subtle rounded text-text-muted font-mono text-[9px] whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                available once active or bench
+              </span>
+            </span>
+          )}
           <span className="font-mono text-[10px] text-text-muted uppercase">
             {provider.last_contact
               ? `Last: ${new Date(provider.last_contact).toLocaleDateString()}`
@@ -191,6 +260,20 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, o
       {contactError && (
         <div className="mt-1">
           <span className="font-mono text-[10px] text-accent-red">{contactError}</span>
+        </div>
+      )}
+
+      {/* One-Sheet Output */}
+      {showOneSheet && (
+        <div onClick={e => e.stopPropagation()}>
+          <OneSheetOutput
+            content={oneSheetContent}
+            loading={oneSheetLoading}
+            error={oneSheetError}
+            copied={oneSheetCopied}
+            onRegenerate={(e?: any) => handleGenerateOneSheet(e || { stopPropagation: () => { } } as any)}
+            onCopy={handleCopyOneSheet}
+          />
         </div>
       )}
     </div>
