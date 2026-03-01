@@ -201,7 +201,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       animate={{ opacity: 1 }}
       className="col-span-2"
     >
-      <BuyerCardWithDelete buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+      <BuyerCardWithDelete buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
     </motion.div>
   );
 
@@ -392,7 +392,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
               <div className="space-y-4">
                 <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
                 {buyers.map(b => (
-                  <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+                  <BuyerCardWithDelete key={b.id} buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
                 ))}
               </div>
             </div>
@@ -448,11 +448,11 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 };
 
 // Inline buyer card with delete confirmation
-const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void; onLogContact: (id: string) => void }> = ({ buyer, onDelete, onLogContact }) => {
+const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void; onLogContact: (id: string) => void; onClick?: () => void }> = ({ buyer, onDelete, onLogContact, onClick }) => {
   const [confirming, setConfirming] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   return (
-    <div className="bg-bg-card border border-border-subtle p-4 rounded-lg group">
+    <div onClick={onClick} className="bg-bg-card border border-border-subtle p-4 rounded-lg group hover:bg-bg-card-hover hover:border-border-hover transition-all cursor-pointer">
       <div className="flex justify-between items-start mb-2">
         <h6 className="text-xl">{buyer.org_name}</h6>
         <div className="flex items-center gap-2">
@@ -462,7 +462,7 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
           <span className="font-mono text-[10px] text-accent-blue uppercase">{buyer.stage}</span>
           {!confirming && (
             <button
-              onClick={() => setConfirming(true)}
+              onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
               className="text-text-muted hover:text-accent-red transition-colors p-1 opacity-0 group-hover:opacity-100"
               title="Delete buyer"
             >
@@ -475,13 +475,13 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
         <div className="flex items-center gap-3 mb-2 p-2 bg-accent-red/5 border border-accent-red/20 rounded-lg">
           <span className="font-mono text-[10px] text-accent-red uppercase tracking-wider">Delete?</span>
           <button
-            onClick={() => onDelete(buyer.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(buyer.id); }}
             className="px-3 py-1 bg-accent-red text-white font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/80 transition-colors"
           >
             Confirm
           </button>
           <button
-            onClick={() => setConfirming(false)}
+            onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
             className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors"
           >
             Cancel
@@ -491,7 +491,8 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
       <div className="flex justify-between items-end">
         <span className="font-mono text-[10px] text-text-muted uppercase">Last: {buyer.last_contact ? new Date(buyer.last_contact).toLocaleDateString() : 'Never'}</span>
         <button
-          onClick={async () => {
+          onClick={async (e) => {
+            e.stopPropagation();
             try {
               setContactError(null);
               await onLogContact(buyer.id);
