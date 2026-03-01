@@ -49,6 +49,9 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, o
           )}
         </div>
         <div className="flex items-center gap-2 ml-2 shrink-0">
+          {(!provider.last_contact || (Date.now() - new Date(provider.last_contact).getTime() > 14 * 24 * 60 * 60 * 1000)) && (
+            <span className="font-mono text-[10px] text-accent-red uppercase">Overdue</span>
+          )}
           <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
             {provider.niche}
           </span>

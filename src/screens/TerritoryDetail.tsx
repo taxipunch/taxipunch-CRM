@@ -11,18 +11,29 @@ interface TerritoryDetailProps {
   navigate: (screen: string, context?: any) => void;
 }
 
+const OVERDUE_DAYS = 14;
+const isOverdue = (lastContact: string | null | undefined): boolean => {
+  if (!lastContact) return true;
+  const diff = Date.now() - new Date(lastContact).getTime();
+  return diff > OVERDUE_DAYS * 24 * 60 * 60 * 1000;
+};
+
 // --- Mobile helper components ---
 const CollapsedCard: React.FC<{
   name: string;
   subtitle: string;
   isExpanded: boolean;
+  overdue?: boolean;
   onTap: () => void;
-}> = ({ name, subtitle, isExpanded, onTap }) => (
+}> = ({ name, subtitle, isExpanded, overdue, onTap }) => (
   <button
     onClick={onTap}
     className="p-3 rounded-xl bg-bg-card border border-border-subtle text-left w-full transition-colors hover:bg-bg-card-hover"
   >
-    <p className="text-sm truncate">{name}</p>
+    <div className="flex items-center gap-1.5">
+      {overdue && <span className="w-1.5 h-1.5 rounded-full bg-accent-red flex-shrink-0" />}
+      <p className="text-sm truncate">{name}</p>
+    </div>
     <div className="flex justify-between items-center mt-1">
       <span className="font-mono text-[10px] uppercase text-text-muted">{subtitle}</span>
       {isExpanded ? <ChevronUp size={12} className="text-text-muted" /> : <ChevronDown size={12} className="text-text-muted" />}
@@ -117,9 +128,12 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       .filter(Boolean)
   );
 
+  const overdueProviders = providers.filter(p => isOverdue(p.last_contact));
+  const overdueBuyers = buyers.filter(b => isOverdue(b.last_contact));
+
   const tabs = [
     { id: 'MATCHES', label: 'Matches', count: matches.length, color: 'text-accent-green' },
-    { id: 'FOLLOW-UP', label: 'Follow-up', count: providers.length + buyers.length, color: 'text-accent-yellow' },
+    { id: 'FOLLOW-UP', label: 'Follow-up', count: overdueProviders.length + overdueBuyers.length, color: 'text-accent-yellow' },
     { id: 'OUTREACH', label: 'Outreach', count: unassignedProviders.length, color: 'text-accent-blue' },
   ];
 
@@ -326,6 +340,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                       name={p.business_name || p.name}
                       subtitle={p.niche || p.stage}
                       isExpanded={false}
+                      overdue={isOverdue(p.last_contact)}
                       onTap={() => toggleExpand(`provider-${p.id}`)}
                     />
                   );
@@ -342,6 +357,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                       name={b.org_name}
                       subtitle={b.property_type || b.stage}
                       isExpanded={false}
+                      overdue={isOverdue(b.last_contact)}
                       onTap={() => toggleExpand(`buyer-${b.id}`)}
                     />
                   );
@@ -428,6 +444,9 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
       <div className="flex justify-between items-start mb-2">
         <h6 className="text-xl">{buyer.org_name}</h6>
         <div className="flex items-center gap-2">
+          {isOverdue(buyer.last_contact) && (
+            <span className="font-mono text-[10px] text-accent-red uppercase">Overdue</span>
+          )}
           <span className="font-mono text-[10px] text-accent-blue uppercase">{buyer.stage}</span>
           {!confirming && (
             <button
