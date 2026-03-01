@@ -1,25 +1,34 @@
 import { supabase } from './supabase';
 
-export async function getTopMatch() {
+// Shared match-finding logic used by both getTopMatch and getDashboardStats
+async function fetchMatchData() {
   const [{ data: buyers }, { data: providers }] = await Promise.all([
     supabase.from('buyers').select('*, buyer_needs(*)').eq('buyer_needs.filled', false),
     supabase.from('providers').select('*').not('territory_id', 'is', null),
   ]);
+  return { buyers: buyers || [], providers: providers || [] };
+}
 
-  if (!buyers || !providers) return null;
-
+function findAllMatches(buyers: any[], providers: any[]) {
+  const matches: { provider: any; buyer: any; niche: string }[] = [];
   for (const buyer of buyers) {
-    const needs = (buyer as any).buyer_needs?.filter((n: any) => !n.filled) || [];
+    const needs = buyer.buyer_needs?.filter((n: any) => !n.filled) || [];
     for (const need of needs) {
       const provider = providers.find(
         p => p.niche?.toLowerCase() === need.niche?.toLowerCase() && p.territory_id === buyer.territory_id
       );
       if (provider) {
-        return { provider, buyer, niche: need.niche as string };
+        matches.push({ provider, buyer, niche: need.niche as string });
       }
     }
   }
-  return null;
+  return matches;
+}
+
+export async function getTopMatch() {
+  const { buyers, providers } = await fetchMatchData();
+  const matches = findAllMatches(buyers, providers);
+  return matches.length > 0 ? matches[0] : null;
 }
 
 export async function getTerritories() {
@@ -57,23 +66,25 @@ export async function getTranscripts() {
 
 export async function getDashboardStats() {
   const MONTHLY_RATE = 297;
-  const [providers, buyers, introductions, territories, activeProviders] = await Promise.all([
+  const [providerRes, buyerRes, introRes, territoryRes, activeRes, matchData] = await Promise.all([
     supabase.from('providers').select('id', { count: 'exact' }),
     supabase.from('buyers').select('id', { count: 'exact' }),
     supabase.from('introductions').select('id', { count: 'exact' }),
     supabase.from('territories').select('id', { count: 'exact' }),
     supabase.from('providers').select('id', { count: 'exact' }).eq('stage', 'active'),
+    fetchMatchData(),
   ]);
 
-  const activeCount = activeProviders.count || 0;
+  const activeCount = activeRes.count || 0;
+  const openMatches = findAllMatches(matchData.buyers, matchData.providers).length;
 
   return {
-    providers: providers.count || 0,
-    buyers: buyers.count || 0,
-    introductions: introductions.count || 0,
-    territories: territories.count || 0,
+    providers: providerRes.count || 0,
+    buyers: buyerRes.count || 0,
+    introductions: introRes.count || 0,
+    territories: territoryRes.count || 0,
     mrr: activeCount * MONTHLY_RATE,
-    openMatches: 0 // Placeholder
+    openMatches,
   };
 }
 
