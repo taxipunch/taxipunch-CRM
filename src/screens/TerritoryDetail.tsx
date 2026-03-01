@@ -215,10 +215,17 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
           <h2 className="text-3xl md:text-6xl mb-2">{territory?.name}</h2>
           <div className="flex items-center gap-4">
             <span className="font-mono text-xs text-text-secondary uppercase tracking-widest">{territory?.zone}</span>
-            <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-accent-green" />
-              <div className="w-2 h-2 rounded-full bg-accent-green" />
-            </div>
+            {territory?.signal && (() => {
+              const color = { BUILD: 'bg-accent-green', GROW: 'bg-accent-blue', WATCH: 'bg-accent-yellow', COLD: 'bg-text-muted' }[territory.signal as string] || 'bg-text-muted';
+              const textColor = { BUILD: 'text-accent-green', GROW: 'text-accent-blue', WATCH: 'text-accent-yellow', COLD: 'text-text-muted' }[territory.signal as string] || 'text-text-muted';
+              return (
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full ${color}`} />
+                  <div className={`w-2 h-2 rounded-full ${color}`} />
+                  <span className={`font-mono text-[10px] uppercase ${textColor}`}>{territory.signal}</span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </header>
