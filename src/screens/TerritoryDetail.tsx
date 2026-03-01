@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2 } from 'lucide-react';
+import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { deleteProvider, deleteBuyer, logContact } from '../lib/queries';
 import { Provider, Buyer } from '../types';
@@ -11,6 +11,25 @@ interface TerritoryDetailProps {
   navigate: (screen: string, context?: any) => void;
 }
 
+// --- Mobile helper components ---
+const CollapsedCard: React.FC<{
+  name: string;
+  subtitle: string;
+  isExpanded: boolean;
+  onTap: () => void;
+}> = ({ name, subtitle, isExpanded, onTap }) => (
+  <button
+    onClick={onTap}
+    className="p-3 rounded-xl bg-bg-card border border-border-subtle text-left w-full transition-colors hover:bg-bg-card-hover"
+  >
+    <p className="text-sm truncate">{name}</p>
+    <div className="flex justify-between items-center mt-1">
+      <span className="font-mono text-[10px] uppercase text-text-muted">{subtitle}</span>
+      {isExpanded ? <ChevronUp size={12} className="text-text-muted" /> : <ChevronDown size={12} className="text-text-muted" />}
+    </div>
+  </button>
+);
+
 export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, navigate }) => {
   const [territory, setTerritory] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('MATCHES');
@@ -19,6 +38,9 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   const [unassignedProviders, setUnassignedProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,8 +123,71 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
     { id: 'OUTREACH', label: 'Outreach', count: unassignedProviders.length, color: 'text-accent-blue' },
   ];
 
+  // --- Render helpers for mobile expanded cards ---
+  const renderExpandedMatch = (match: any) => (
+    <motion.div
+      key={`expanded-${match.provider.id}-${match.niche}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="col-span-2"
+    >
+      <div className="p-5 rounded-xl bg-bg-card border border-border-subtle">
+        <div className="flex justify-between items-start mb-2">
+          <h4 className="text-lg">{match.provider.business_name || match.provider.name}</h4>
+          <button onClick={() => setExpandedId(null)} className="text-text-muted"><ChevronUp size={14} /></button>
+        </div>
+        <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded inline-block mb-3">{match.provider.niche}</span>
+        <div className="flex items-center gap-3 text-text-secondary text-xs font-mono mb-3">
+          {match.provider.review_score != null && (
+            <span className="flex items-center gap-1"><Star size={10} className="text-accent-yellow fill-accent-yellow" /> {match.provider.review_score} ({match.provider.review_count})</span>
+          )}
+          {match.provider.phone && (
+            <span className="flex items-center gap-1"><Phone size={10} /> {match.provider.phone}</span>
+          )}
+        </div>
+        <button
+          onClick={() => navigate('INTRODUCE_FLOW', { provider: match.provider, buyer: match.buyer, niche: match.niche })}
+          className="w-full bg-accent-green text-bg-base font-mono text-[10px] font-bold py-2 rounded-full uppercase tracking-wider"
+        >
+          Introduce
+        </button>
+      </div>
+      {/* Linked buyer card */}
+      <div className="mt-2 p-5 rounded-xl bg-bg-card border-t-2 border-accent-green">
+        <div className="flex justify-between items-start">
+          <h4 className="text-lg">{match.buyer.org_name}</h4>
+          <span className="font-mono text-[10px] text-accent-blue uppercase">{match.buyer.property_type}</span>
+        </div>
+        <p className="text-text-secondary text-sm font-mono mt-1">{match.buyer.units} Units · {match.buyer.contact_name}</p>
+        <p className="font-mono text-[10px] text-text-muted mt-2">Needs: {match.niche}</p>
+      </div>
+    </motion.div>
+  );
+
+  const renderExpandedProvider = (p: Provider) => (
+    <motion.div
+      key={`expanded-${p.id}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="col-span-2"
+    >
+      <ProviderCard provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+    </motion.div>
+  );
+
+  const renderExpandedBuyer = (b: Buyer) => (
+    <motion.div
+      key={`expanded-${b.id}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="col-span-2"
+    >
+      <BuyerCardWithDelete buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+    </motion.div>
+  );
+
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <button
         onClick={() => navigate('TERRITORY_HEALTH')}
         className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-8 group"
@@ -111,9 +196,9 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
         <span className="font-mono text-[10px] uppercase tracking-widest">Back to Health</span>
       </button>
 
-      <header className="mb-12 flex justify-between items-end">
+      <header className="mb-8 md:mb-12 flex justify-between items-end">
         <div>
-          <h2 className="text-6xl mb-2">{territory?.name}</h2>
+          <h2 className="text-3xl md:text-6xl mb-2">{territory?.name}</h2>
           <div className="flex items-center gap-4">
             <span className="font-mono text-xs text-text-secondary uppercase tracking-widest">{territory?.zone}</span>
             <div className="flex gap-1">
@@ -124,12 +209,12 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
         </div>
       </header>
 
-      <div className="flex gap-8 mb-12 border-b border-border-subtle">
+      <div className="flex gap-4 md:gap-8 mb-8 md:mb-12 border-b border-border-subtle overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`pb-4 px-2 relative transition-all group`}
+            onClick={() => { setActiveTab(tab.id); setExpandedId(null); }}
+            className={`pb-4 px-2 relative transition-all group whitespace-nowrap`}
           >
             <div className="flex items-center gap-2">
               <span className={`font-mono text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
@@ -150,51 +235,74 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       </div>
 
       <div className="space-y-4">
+        {/* ===== MATCHES TAB ===== */}
         {activeTab === 'MATCHES' && (
           <>
             {matches.length > 0 ? (
-              matches.map((match: any, i) => (
-                <div key={i} className="grid grid-cols-[1fr,auto,1fr] gap-8 items-center bg-bg-card border border-border-subtle p-6 rounded-xl hover:bg-bg-card-hover transition-all">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <h4 className="text-2xl">{match.provider.business_name || match.provider.name}</h4>
-                      <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
-                        {match.provider.niche}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-text-secondary text-xs font-mono">
-                      {match.provider.review_score != null && (
-                        <span className="flex items-center gap-1"><Star size={10} className="text-accent-yellow fill-accent-yellow" /> {match.provider.review_score} ({match.provider.review_count})</span>
-                      )}
-                      {match.provider.phone && (
-                        <span className="flex items-center gap-1"><Phone size={10} /> {match.provider.phone}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 rounded-full border border-accent-green flex items-center justify-center text-accent-green">
-                      <ArrowRight size={20} />
-                    </div>
-                    <button
-                      onClick={() => navigate('INTRODUCE_FLOW', { provider: match.provider, buyer: match.buyer, niche: match.niche })}
-                      className="bg-accent-green text-bg-base font-mono text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider hover:scale-105 transition-transform"
-                    >
-                      Introduce
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 text-right">
-                    <div className="flex justify-between items-start flex-row-reverse">
-                      <h4 className="text-2xl">{match.buyer.org_name}</h4>
-                      <span className="font-mono text-[10px] text-accent-blue uppercase border border-accent-blue/30 px-2 py-0.5 rounded">
-                        {match.buyer.property_type}
-                      </span>
-                    </div>
-                    <p className="text-text-secondary text-sm font-mono">{match.buyer.units} Units · {match.buyer.contact_name}</p>
-                  </div>
+              <>
+                {/* Mobile: collapsed 2-col grid */}
+                <div className="md:hidden grid grid-cols-2 gap-2">
+                  {matches.map((match: any, i) => {
+                    const matchId = `match-${match.provider.id}-${match.niche}`;
+                    const isExpanded = expandedId === matchId;
+                    return isExpanded ? renderExpandedMatch(match) : (
+                      <CollapsedCard
+                        key={matchId}
+                        name={match.provider.business_name || match.provider.name}
+                        subtitle={match.niche}
+                        isExpanded={false}
+                        onTap={() => toggleExpand(matchId)}
+                      />
+                    );
+                  })}
                 </div>
-              ))
+
+                {/* Desktop: full match cards */}
+                <div className="hidden md:block space-y-4">
+                  {matches.map((match: any, i) => (
+                    <div key={i} className="grid grid-cols-[1fr,auto,1fr] gap-8 items-center bg-bg-card border border-border-subtle p-6 rounded-xl hover:bg-bg-card-hover transition-all">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-2xl">{match.provider.business_name || match.provider.name}</h4>
+                          <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
+                            {match.provider.niche}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-text-secondary text-xs font-mono">
+                          {match.provider.review_score != null && (
+                            <span className="flex items-center gap-1"><Star size={10} className="text-accent-yellow fill-accent-yellow" /> {match.provider.review_score} ({match.provider.review_count})</span>
+                          )}
+                          {match.provider.phone && (
+                            <span className="flex items-center gap-1"><Phone size={10} /> {match.provider.phone}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-10 h-10 rounded-full border border-accent-green flex items-center justify-center text-accent-green">
+                          <ArrowRight size={20} />
+                        </div>
+                        <button
+                          onClick={() => navigate('INTRODUCE_FLOW', { provider: match.provider, buyer: match.buyer, niche: match.niche })}
+                          className="bg-accent-green text-bg-base font-mono text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider hover:scale-105 transition-transform"
+                        >
+                          Introduce
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 text-right">
+                        <div className="flex justify-between items-start flex-row-reverse">
+                          <h4 className="text-2xl">{match.buyer.org_name}</h4>
+                          <span className="font-mono text-[10px] text-accent-blue uppercase border border-accent-blue/30 px-2 py-0.5 rounded">
+                            {match.buyer.property_type}
+                          </span>
+                        </div>
+                        <p className="text-text-secondary text-sm font-mono">{match.buyer.units} Units · {match.buyer.contact_name}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="py-20 text-center border border-dashed border-border-subtle rounded-xl">
                 <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No active matches in this territory</p>
@@ -203,38 +311,102 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
           </>
         )}
 
+        {/* ===== FOLLOW-UP TAB ===== */}
         {activeTab === 'FOLLOW-UP' && (
-          <div className="grid grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
-              {providers.length > 0 ? providers.map(p => (
-                <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
-              )) : (
-                <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
-                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
-                </div>
-              )}
+          <>
+            {/* Mobile: collapsed 2-col grid mixing providers and buyers */}
+            <div className="md:hidden space-y-4">
+              <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Providers</h5>
+              <div className="grid grid-cols-2 gap-2">
+                {providers.map(p => {
+                  const isExpanded = expandedId === `provider-${p.id}`;
+                  return isExpanded ? renderExpandedProvider(p) : (
+                    <CollapsedCard
+                      key={p.id}
+                      name={p.business_name || p.name}
+                      subtitle={p.niche || p.stage}
+                      isExpanded={false}
+                      onTap={() => toggleExpand(`provider-${p.id}`)}
+                    />
+                  );
+                })}
+              </div>
+
+              <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest pt-4">Buyers</h5>
+              <div className="grid grid-cols-2 gap-2">
+                {buyers.map(b => {
+                  const isExpanded = expandedId === `buyer-${b.id}`;
+                  return isExpanded ? renderExpandedBuyer(b) : (
+                    <CollapsedCard
+                      key={b.id}
+                      name={b.org_name}
+                      subtitle={b.property_type || b.stage}
+                      isExpanded={false}
+                      onTap={() => toggleExpand(`buyer-${b.id}`)}
+                    />
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-4">
-              <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
-              {buyers.map(b => (
-                <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
-              ))}
+
+            {/* Desktop: existing 2-column layout */}
+            <div className="hidden md:grid grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
+                {providers.length > 0 ? providers.map(p => (
+                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                )) : (
+                  <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
+                    <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
+                {buyers.map(b => (
+                  <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
+        {/* ===== OUTREACH TAB ===== */}
         {activeTab === 'OUTREACH' && (
           <>
             <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-6">
               {unassignedProviders.length} providers not yet assigned to a territory
             </p>
+
             {unassignedProviders.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {unassignedProviders.map(p => (
-                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
-                ))}
-              </div>
+              <>
+                {/* Mobile: collapsed 2-col grid */}
+                <div className="md:hidden grid grid-cols-2 gap-2">
+                  {unassignedProviders.map(p => {
+                    const isExpanded = expandedId === `outreach-${p.id}`;
+                    return isExpanded ? (
+                      <motion.div key={`expanded-${p.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
+                        <ProviderCard provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                      </motion.div>
+                    ) : (
+                      <CollapsedCard
+                        key={p.id}
+                        name={p.business_name || p.name}
+                        subtitle={p.niche || 'unknown'}
+                        isExpanded={false}
+                        onTap={() => toggleExpand(`outreach-${p.id}`)}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Desktop */}
+                <div className="hidden md:grid grid-cols-2 gap-4">
+                  {unassignedProviders.map(p => (
+                    <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="py-20 text-center border border-dashed border-border-subtle rounded-xl">
                 <p className="font-mono text-xs text-text-muted uppercase tracking-widest">All providers are assigned to territories</p>
