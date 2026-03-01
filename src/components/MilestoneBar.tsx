@@ -195,12 +195,23 @@ export const MilestoneBar: React.FC<MilestoneBarProps> = ({ milestoneData, onCli
         <div className="flex justify-between items-center px-1">
           {milestones.map((m) => (
             <div key={m.id} className="relative flex flex-col items-center">
-              {/* Tooltip */}
-              {visibleLabelId === m.id && (
-                <div className="absolute bottom-full mb-2 px-2 py-1 bg-bg-card border border-border-subtle rounded text-text-primary font-mono text-[10px] uppercase whitespace-nowrap z-10 pointer-events-none shadow-lg">
-                  {m.title}
-                </div>
-              )}
+              {/* Desktop hover tooltip */}
+              <AnimatePresence>
+                {hoveredId === m.id && !longPressId && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.15 }}
+                    className="hidden md:block absolute bottom-full mb-2 bg-bg-card border border-border-subtle rounded-lg px-3 py-2 shadow-lg z-10 pointer-events-none min-w-[160px]"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-text-primary block">{m.title}</span>
+                    {MILESTONE_DETAILS[m.id] && (
+                      <span className="text-text-secondary text-xs mt-1 block leading-snug">{MILESTONE_DETAILS[m.id].description.split('—')[0].trim()}</span>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Circle */}
               <button
@@ -220,6 +231,20 @@ export const MilestoneBar: React.FC<MilestoneBarProps> = ({ milestoneData, onCli
                 onClick={(e) => handleCircleClick(e, m.id)}
                 aria-label={m.title}
               />
+
+              {/* Mobile long-press label */}
+              <AnimatePresence>
+                {longPressId === m.id && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="md:hidden font-mono text-[9px] uppercase tracking-widest text-text-primary mt-1 whitespace-nowrap absolute top-full"
+                  >
+                    {m.title}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>
@@ -245,8 +270,8 @@ export const MilestoneBar: React.FC<MilestoneBarProps> = ({ milestoneData, onCli
 
             <div className="flex items-center gap-2 mb-3">
               <div className={`w-2 h-2 rounded-full ${selectedMilestoneObj.status === 'done' ? 'bg-accent-green'
-                  : selectedMilestoneObj.status === 'current' ? 'bg-accent-yellow'
-                    : 'bg-border-subtle'
+                : selectedMilestoneObj.status === 'current' ? 'bg-accent-yellow'
+                  : 'bg-border-subtle'
                 }`} />
               <h3 className="text-2xl font-display">{selectedMilestoneObj.title}</h3>
             </div>
