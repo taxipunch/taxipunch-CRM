@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Provider, Buyer } from '../types';
+import { ProviderCard } from '../components/ProviderCard';
 
 interface TerritoryDetailProps {
   territoryId: string;
@@ -14,6 +15,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   const [activeTab, setActiveTab] = useState('MATCHES');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [unassignedProviders, setUnassignedProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,15 +23,17 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
     setLoading(true);
     setError(null);
     try {
-      const [tRes, pRes, bRes] = await Promise.all([
+      const [tRes, pRes, bRes, uRes] = await Promise.all([
         supabase.from('territories').select('*').eq('id', territoryId).single(),
         supabase.from('providers').select('*').eq('territory_id', territoryId),
-        supabase.from('buyers').select('*, buyer_needs(*)').eq('territory_id', territoryId)
+        supabase.from('buyers').select('*, buyer_needs(*)').eq('territory_id', territoryId),
+        supabase.from('providers').select('*').is('territory_id', null).eq('is_disqualified', false)
       ]);
 
       setTerritory(tRes.data);
       setProviders(pRes.data || []);
       setBuyers(bRes.data || []);
+      setUnassignedProviders(uRes.data || []);
     } catch (err) {
       console.error(err);
       setError("Couldn't load territory details. Check your connection and try again.");
@@ -68,8 +72,8 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 
   const tabs = [
     { id: 'MATCHES', label: 'Matches', count: matches.length, color: 'text-accent-green' },
-    { id: 'FOLLOW-UP', label: 'Follow-up', count: 0, color: 'text-accent-yellow' },
-    { id: 'OUTREACH', label: 'Outreach', count: 0, color: 'text-accent-blue' },
+    { id: 'FOLLOW-UP', label: 'Follow-up', count: providers.length + buyers.length, color: 'text-accent-yellow' },
+    { id: 'OUTREACH', label: 'Outreach', count: unassignedProviders.length, color: 'text-accent-blue' },
   ];
 
   return (
@@ -128,12 +132,19 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                 <div key={i} className="grid grid-cols-[1fr,auto,1fr] gap-8 items-center bg-bg-card border border-border-subtle p-6 rounded-xl hover:bg-bg-card-hover transition-all">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <h4 className="text-2xl">{match.provider.name}</h4>
+                      <h4 className="text-2xl">{match.provider.business_name || match.provider.name}</h4>
                       <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
                         {match.provider.niche}
                       </span>
                     </div>
-                    <p className="text-text-secondary text-sm font-mono">{match.provider.business_name}</p>
+                    <div className="flex items-center gap-3 text-text-secondary text-xs font-mono">
+                      {match.provider.review_score != null && (
+                        <span className="flex items-center gap-1"><Star size={10} className="text-accent-yellow fill-accent-yellow" /> {match.provider.review_score} ({match.provider.review_count})</span>
+                      )}
+                      {match.provider.phone && (
+                        <span className="flex items-center gap-1"><Phone size={10} /> {match.provider.phone}</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-center gap-2">
@@ -171,18 +182,13 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
           <div className="grid grid-cols-2 gap-8">
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
-              {providers.map(p => (
-                <div key={p.id} className="bg-bg-card border border-border-subtle p-4 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <h6 className="text-xl">{p.name}</h6>
-                    <span className="font-mono text-[10px] text-accent-yellow uppercase">{p.stage}</span>
-                  </div>
-                  <div className="flex justify-between items-end">
-                    <span className="font-mono text-[10px] text-text-muted uppercase">Last: 14d ago</span>
-                    <button className="text-accent-yellow hover:underline font-mono text-[10px] uppercase">Log Contact</button>
-                  </div>
+              {providers.length > 0 ? providers.map(p => (
+                <ProviderCard key={p.id} provider={p} />
+              )) : (
+                <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
@@ -193,13 +199,32 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                     <span className="font-mono text-[10px] text-accent-blue uppercase">{b.stage}</span>
                   </div>
                   <div className="flex justify-between items-end">
-                    <span className="font-mono text-[10px] text-text-muted uppercase">Last: 8d ago</span>
+                    <span className="font-mono text-[10px] text-text-muted uppercase">Last: {b.last_contact ? new Date(b.last_contact).toLocaleDateString() : 'Never'}</span>
                     <button className="text-accent-blue hover:underline font-mono text-[10px] uppercase">Log Contact</button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+        )}
+
+        {activeTab === 'OUTREACH' && (
+          <>
+            <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-6">
+              {unassignedProviders.length} providers not yet assigned to a territory
+            </p>
+            {unassignedProviders.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {unassignedProviders.map(p => (
+                  <ProviderCard key={p.id} provider={p} />
+                ))}
+              </div>
+            ) : (
+              <div className="py-20 text-center border border-dashed border-border-subtle rounded-xl">
+                <p className="font-mono text-xs text-text-muted uppercase tracking-widest">All providers are assigned to territories</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

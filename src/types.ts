@@ -30,6 +30,16 @@ export interface Provider {
   tier: string;
   stage: string;
   last_contact: string;
+  review_score?: number;
+  review_count?: number;
+  address?: string;
+  quality_score?: number;
+  current_website_url?: string;
+  phone?: string;
+  google_business_url?: string;
+  website_status?: string;
+  is_franchise?: boolean;
+  is_disqualified?: boolean;
 }
 
 export interface Buyer {
