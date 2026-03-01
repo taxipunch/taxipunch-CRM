@@ -123,9 +123,18 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         setExtracting(true);
         setExtractError(null);
         try {
-            const fields = await extractTranscriptFields(transcript.content);
-            setExtractedFields(fields);
-            setEditedFields(fields);
+            const result = await extractTranscriptFields(transcript.content);
+            console.log('Setting fields:', result);
+            // Normalize niche to match select options (capitalized: "Handyman")
+            if (result.niche && typeof result.niche === 'string') {
+                result.niche = result.niche.charAt(0).toUpperCase() + result.niche.slice(1).toLowerCase();
+            }
+            // Normalize entity_type to lowercase to match select values
+            if (result.entity_type && typeof result.entity_type === 'string') {
+                result.entity_type = result.entity_type.toLowerCase();
+            }
+            setExtractedFields(result);
+            setEditedFields(result);
             await updateTranscriptStatus(transcript.id, 'reviewed');
             setTranscripts(prev => prev.map(t => t.id === transcript.id ? { ...t, status: 'reviewed' } : t));
         } catch (err) {

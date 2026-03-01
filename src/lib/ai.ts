@@ -77,7 +77,14 @@ Transcript: ${rawText}`,
         responseMimeType: "application/json"
       }
     });
-    const parsed = JSON.parse(response.text || '{}');
+    const responseText = response.text || '{}';
+    console.log('Extraction raw response:', responseText);
+    const raw = responseText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    const parsed = JSON.parse(raw);
+    console.log('Extraction parsed:', parsed);
     return { ...nullFields, ...parsed };
   } catch (error) {
     console.error("Error extracting transcript fields:", error);
