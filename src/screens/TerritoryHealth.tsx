@@ -53,7 +53,7 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <header className="mb-12">
         <h2 className="text-3xl md:text-5xl mb-2">Territory Health</h2>
         <p className="text-text-secondary font-mono text-xs uppercase tracking-widest">
@@ -82,8 +82,8 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 ${filter === f
-                  ? "bg-accent-green text-bg-base font-bold"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                ? "bg-accent-green text-bg-base font-bold"
+                : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
                 }`}
             >
               {f}

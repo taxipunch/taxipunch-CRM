@@ -98,13 +98,13 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
           <span className="font-mono text-[10px] text-accent-green uppercase tracking-wider">Done?</span>
           <button
             onClick={handleComplete}
-            className="px-3 py-1 bg-accent-green text-bg-base font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-green/80 transition-colors"
+            className="px-4 py-2.5 bg-accent-green text-bg-base font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-green/80 transition-colors"
           >
             Confirm
           </button>
           <button
             onClick={() => setConfirmingDone(false)}
-            className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors"
+            className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors px-3 py-2.5"
           >
             Cancel
           </button>

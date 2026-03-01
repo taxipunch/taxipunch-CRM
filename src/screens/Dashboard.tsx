@@ -49,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <header className="mb-6">
         <div className="flex items-baseline gap-3 mb-1">
           <h2 className="text-2xl md:text-3xl">Good morning, Joseph.</h2>

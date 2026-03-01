@@ -22,8 +22,8 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <button 
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <button
         onClick={() => navigate('TERRITORY_DETAIL', { territoryId: provider?.territory_id })}
         className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-8 group"
       >
@@ -52,14 +52,14 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
       <div className="grid grid-cols-[1fr,350px] gap-12">
         <div className="space-y-8">
           <div className="flex gap-4 border-b border-border-subtle">
-            <button 
+            <button
               onClick={() => setActiveTab('BUYER')}
               className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative ${activeTab === 'BUYER' ? 'text-text-primary' : 'text-text-secondary'}`}
             >
               1 · For the Buyer
               {activeTab === 'BUYER' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green" />}
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('PROVIDER')}
               className={`pb-4 px-2 font-mono text-[10px] uppercase tracking-widest relative ${activeTab === 'PROVIDER' ? 'text-text-primary' : 'text-text-secondary'}`}
             >
@@ -71,7 +71,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
           <div className="bg-bg-card border border-border-subtle rounded-2xl min-h-[400px] p-12 relative overflow-hidden">
             <AnimatePresence mode="wait">
               {isGenerating ? (
-                <motion.div 
+                <motion.div
                   key="loading"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -101,7 +101,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="prose prose-invert max-w-none">
                     <h3 className="text-3xl font-display mb-6">
                       {activeTab === 'BUYER' ? 'Provider Recommendation' : 'Opportunity Brief'}
@@ -136,7 +136,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
                     <h4 className="text-2xl mb-2">No documents generated yet</h4>
                     <p className="text-text-secondary text-sm max-w-xs mx-auto">Click the button to have AI analyze the match and generate custom briefing documents.</p>
                   </div>
-                  <button 
+                  <button
                     onClick={handleGenerate}
                     className="bg-accent-green text-bg-base font-mono text-xs font-bold px-8 py-3 rounded-full uppercase tracking-wider hover:scale-105 transition-transform"
                   >

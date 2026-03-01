@@ -91,9 +91,9 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
     setBuyers(prev => prev.map(b => b.id === id ? { ...b, last_contact: now } : b));
   };
 
-  if (loading) return <div className="p-8 animate-pulse">Loading...</div>;
+  if (loading) return <div className="p-4 md:p-8 animate-pulse">Loading...</div>;
   if (error) return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center justify-between p-4 bg-accent-red/5 border border-accent-red/20 rounded-xl">
         <p className="text-sm text-accent-red">{error}</p>
         <button
