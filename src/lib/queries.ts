@@ -136,6 +136,14 @@ export async function getPendingTranscriptCount() {
   return count || 0;
 }
 
+export async function createTranscript(content: string, source?: string) {
+  const record: Record<string, any> = { content, status: 'pending' };
+  if (source) record.summary = source; // store source in summary field
+  const { data, error } = await supabase.from('transcripts').insert(record).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function importTranscriptToCRM(
   transcriptId: string,
   entityType: 'provider' | 'buyer',

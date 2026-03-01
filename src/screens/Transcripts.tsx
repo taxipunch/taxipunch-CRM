@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, RefreshCw, Loader2, Upload, Sparkles } from 'lucide-react';
-import { getTranscripts, updateTranscriptStatus } from '../lib/queries';
+import { ChevronLeft, ChevronRight, RefreshCw, Loader2, Upload, Sparkles, Plus } from 'lucide-react';
+import { getTranscripts, updateTranscriptStatus, createTranscript } from '../lib/queries';
 import { extractTranscriptFields } from '../lib/ai';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -42,7 +42,14 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [view, setView] = useState<'list' | 'detail' | 'new'>('list');
     const [filter, setFilter] = useState('ALL');
+
+    // Compose state
+    const [newContent, setNewContent] = useState('');
+    const [newSource, setNewSource] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // Detail state
     const [extracting, setExtracting] = useState(false);
@@ -81,11 +88,35 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
 
     const resetDetail = () => {
         setSelectedId(null);
+        setView('list');
         setExtractedFields(null);
         setEditedFields({});
         setExtractError(null);
         setImportError(null);
         setImportSuccess(false);
+    };
+
+    const openDetail = (id: string) => {
+        setSelectedId(id);
+        setView('detail');
+    };
+
+    const handleSaveTranscript = async () => {
+        if (!newContent.trim()) return;
+        setSaving(true);
+        setSaveError(null);
+        try {
+            const record = await createTranscript(newContent.trim(), newSource.trim() || undefined);
+            await load();
+            setNewContent('');
+            setNewSource('');
+            openDetail(record.id);
+        } catch (err: any) {
+            console.error(err);
+            setSaveError(err.message || 'Failed to save transcript.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleExtract = async (transcript: any) => {
@@ -338,6 +369,60 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         );
     }
 
+    // ── New transcript view ──
+    if (view === 'new') {
+        return (
+            <div className="p-4 md:p-8 max-w-2xl mx-auto">
+                <button
+                    onClick={() => setView('list')}
+                    className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors mb-6"
+                >
+                    <ChevronLeft size={16} />
+                    <span className="font-mono text-[10px] uppercase tracking-widest">Back to Transcripts</span>
+                </button>
+
+                <h2 className="text-3xl md:text-5xl mb-2">New Transcript</h2>
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-8">Paste or type a voice call transcript</p>
+
+                <div className="space-y-5">
+                    <div>
+                        <label className="font-mono text-[10px] uppercase text-text-muted tracking-widest block mb-1">Paste or type transcript</label>
+                        <textarea
+                            value={newContent}
+                            onChange={e => setNewContent(e.target.value)}
+                            className="w-full bg-bg-base border border-border-subtle rounded-xl p-4 text-sm font-mono text-text-secondary h-[400px] resize-none focus:outline-none focus:border-border-active transition-colors placeholder-text-muted"
+                            placeholder="Paste your transcript here…"
+                        />
+                    </div>
+                    <div>
+                        <label className="font-mono text-[10px] uppercase text-text-muted tracking-widest block mb-1">Source (optional)</label>
+                        <input
+                            type="text"
+                            value={newSource}
+                            onChange={e => setNewSource(e.target.value)}
+                            className="w-full bg-bg-base border border-border-subtle rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-active transition-colors"
+                            placeholder="Voicemail, live call, pocket…"
+                        />
+                    </div>
+
+                    {saveError && (
+                        <div className="p-3 bg-accent-red/5 border border-accent-red/20 rounded-lg">
+                            <p className="font-mono text-[10px] text-accent-red">{saveError}</p>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleSaveTranscript}
+                        disabled={saving || !newContent.trim()}
+                        className="w-full bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold rounded-full py-3 tracking-widest hover:bg-accent-green/90 transition-colors disabled:opacity-50"
+                    >
+                        {saving ? 'Saving…' : 'Save Transcript'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     // ── List view ──
     return (
         <div className="p-4 md:p-8 max-w-3xl mx-auto">
@@ -349,12 +434,20 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
                             Voice Intake · {pendingCount} Pending
                         </p>
                     </div>
-                    <button
-                        onClick={load}
-                        className="p-2 rounded-lg bg-bg-card border border-border-subtle hover:bg-bg-card-hover transition-colors text-text-muted hover:text-text-primary"
-                    >
-                        <RefreshCw size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setView('new')}
+                            className="flex items-center gap-1.5 bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold px-4 py-2 rounded-full hover:bg-accent-green/90 transition-colors"
+                        >
+                            <Plus size={12} /> New
+                        </button>
+                        <button
+                            onClick={load}
+                            className="p-2 rounded-lg bg-bg-card border border-border-subtle hover:bg-bg-card-hover transition-colors text-text-muted hover:text-text-primary"
+                        >
+                            <RefreshCw size={16} />
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -395,7 +488,7 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
                     {filteredTranscripts.map(t => (
                         <button
                             key={t.id}
-                            onClick={() => setSelectedId(t.id)}
+                            onClick={() => openDetail(t.id)}
                             className="w-full text-left bg-bg-card border border-border-subtle rounded-xl p-4 hover:bg-bg-card-hover hover:border-border-hover transition-all group"
                         >
                             <div className="flex justify-between items-start mb-2">
