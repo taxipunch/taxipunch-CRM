@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getDashboardStats } from '../lib/queries';
+import { getDashboardStats, getTopMatch } from '../lib/queries';
 import { format } from 'date-fns';
 import { RefreshCw } from 'lucide-react';
 import { MorningBrief } from '../components/MorningBrief';
@@ -14,6 +14,7 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
   const [stats, setStats] = useState<any>(null);
   const [brief, setBrief] = useState<string>('');
+  const [topMatch, setTopMatch] = useState<any>(null);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +23,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
     setLoading(true);
     setError(null);
     try {
-      const [sData, bData] = await Promise.all([
+      const [sData, bData, matchData] = await Promise.all([
         getDashboardStats(),
-        Promise.resolve("Yesterday was productive. 3 new transcripts reviewed.")
+        Promise.resolve("Yesterday was productive. 3 new transcripts reviewed."),
+        getTopMatch(),
       ]);
       setStats(sData);
       setBrief(bData);
+      setTopMatch(matchData);
     } catch (err) {
       console.error(err);
       setError("Couldn't load dashboard data. Check your connection and try again.");
@@ -82,11 +85,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
         {loading ? (
           <div className="h-52 bg-bg-card border border-border-subtle rounded-2xl animate-pulse" />
         ) : (
-          <RecommendationCard
-            title="Introduce John's HVAC to Loyalsock Property Management"
-            description="Loyalsock just flagged an urgent HVAC need for 40 units. John has a 100% response rate and is active in that territory. This intro has a high probability of conversion to MRR."
-            onClick={() => navigate('NEXT_ACTIONS', { filterType: 'MATCH' })}
-          />
+          topMatch ? (
+            <RecommendationCard
+              title={`Introduce ${topMatch.provider.business_name || topMatch.provider.name} to ${topMatch.buyer.org_name}`}
+              description={`${topMatch.buyer.org_name} needs a ${topMatch.niche} provider. ${topMatch.provider.business_name || topMatch.provider.name} is active in that territory.`}
+              onClick={() => navigate('NEXT_ACTIONS', { filterType: 'MATCH' })}
+            />
+          ) : (
+            <div className="p-8 text-center border border-dashed border-border-subtle rounded-2xl">
+              <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No active matches yet</p>
+            </div>
+          )
         )}
       </section>
 

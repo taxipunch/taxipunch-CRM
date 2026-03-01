@@ -1,5 +1,27 @@
 import { supabase } from './supabase';
 
+export async function getTopMatch() {
+  const [{ data: buyers }, { data: providers }] = await Promise.all([
+    supabase.from('buyers').select('*, buyer_needs(*)').eq('buyer_needs.filled', false),
+    supabase.from('providers').select('*').not('territory_id', 'is', null),
+  ]);
+
+  if (!buyers || !providers) return null;
+
+  for (const buyer of buyers) {
+    const needs = (buyer as any).buyer_needs?.filter((n: any) => !n.filled) || [];
+    for (const need of needs) {
+      const provider = providers.find(
+        p => p.niche?.toLowerCase() === need.niche?.toLowerCase() && p.territory_id === buyer.territory_id
+      );
+      if (provider) {
+        return { provider, buyer, niche: need.niche as string };
+      }
+    }
+  }
+  return null;
+}
+
 export async function getTerritories() {
   const { data, error } = await supabase.from('territories').select('*');
   if (error) throw error;
