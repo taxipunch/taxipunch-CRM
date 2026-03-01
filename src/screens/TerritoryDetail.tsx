@@ -131,10 +131,15 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   const overdueProviders = providers.filter(p => isOverdue(p.last_contact));
   const overdueBuyers = buyers.filter(b => isOverdue(b.last_contact));
 
+  const neededNiches = [...new Set(
+    buyers.flatMap(b => (b as any).buyer_needs?.filter((n: any) => !n.filled).map((n: any) => n.niche) || [])
+  )];
+  const relevantUnassigned = unassignedProviders.filter(p => neededNiches.includes(p.niche));
+
   const tabs = [
     { id: 'MATCHES', label: 'Matches', count: matches.length, color: 'text-accent-green' },
     { id: 'FOLLOW-UP', label: 'Follow-up', count: overdueProviders.length + overdueBuyers.length, color: 'text-accent-yellow' },
-    { id: 'OUTREACH', label: 'Outreach', count: unassignedProviders.length, color: 'text-accent-blue' },
+    { id: 'OUTREACH', label: 'Outreach', count: relevantUnassigned.length, color: 'text-accent-blue' },
   ];
 
   // --- Render helpers for mobile expanded cards ---
@@ -398,14 +403,14 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
         {activeTab === 'OUTREACH' && (
           <>
             <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-6">
-              {unassignedProviders.length} providers not yet assigned to a territory
+              {relevantUnassigned.length} unassigned providers match open needs in this territory
             </p>
 
-            {unassignedProviders.length > 0 ? (
+            {relevantUnassigned.length > 0 ? (
               <>
                 {/* Mobile: collapsed 2-col grid */}
                 <div className="md:hidden grid grid-cols-2 gap-2">
-                  {unassignedProviders.map(p => {
+                  {relevantUnassigned.map(p => {
                     const isExpanded = expandedId === `outreach-${p.id}`;
                     return isExpanded ? (
                       <motion.div key={`expanded-${p.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
@@ -425,14 +430,14 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 
                 {/* Desktop */}
                 <div className="hidden md:grid grid-cols-2 gap-4">
-                  {unassignedProviders.map(p => (
+                  {relevantUnassigned.map(p => (
                     <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                   ))}
                 </div>
               </>
             ) : (
               <div className="py-20 text-center border border-dashed border-border-subtle rounded-xl">
-                <p className="font-mono text-xs text-text-muted uppercase tracking-widest">All providers are assigned to territories</p>
+                <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No unassigned providers match this territory's needs</p>
               </div>
             )}
           </>
