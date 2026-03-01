@@ -100,7 +100,7 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
               key={f.id}
               onClick={() => setFilter(f.id)}
               className={cn(
-                "px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5",
+                "px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 min-h-[44px] shrink-0",
                 filter === f.id
                   ? "bg-text-primary text-bg-base font-bold"
                   : "text-text-secondary hover:text-text-primary hover:bg-bg-card"

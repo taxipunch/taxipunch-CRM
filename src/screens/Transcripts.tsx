@@ -481,7 +481,7 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
                             key={f.id}
                             onClick={() => setFilter(f.id)}
                             className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors border",
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors border min-h-[44px] shrink-0",
                                 isActive
                                     ? "bg-accent-green/10 border-accent-green/30 text-accent-green font-bold"
                                     : "bg-bg-card border-border-subtle text-text-muted hover:text-text-primary hover:border-border-active"

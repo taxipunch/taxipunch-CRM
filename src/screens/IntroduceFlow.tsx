@@ -86,7 +86,7 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
             <span className="font-mono text-[10px] text-text-secondary uppercase">{buyer?.property_type}</span>
           </div>
         </div>
-        <h2 className="text-5xl">Generate Introduction</h2>
+        <h2 className="text-3xl md:text-5xl">Generate Introduction</h2>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr,350px] gap-12">

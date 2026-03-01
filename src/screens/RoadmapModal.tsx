@@ -64,9 +64,9 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="max-w-6xl w-full h-full flex flex-col">
-        <header className="flex justify-between items-center mb-12">
+        <header className="flex justify-between items-center mb-6 md:mb-12">
           <div>
-            <h2 className="text-5xl mb-2">Network Roadmap</h2>
+            <h2 className="text-3xl md:text-5xl mb-2">Network Roadmap</h2>
             <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">The path to $10k MRR</p>
           </div>
           <button
@@ -77,7 +77,7 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
           </button>
         </header>
 
-        <div className="flex justify-between items-center mb-20 relative">
+        <div className="flex justify-between items-center mb-10 md:mb-20 relative overflow-x-auto scrollbar-hide pb-8">
           <div className="absolute left-0 right-0 h-px bg-border-subtle -z-10" />
           {milestones.map((m) => (
             <button
@@ -104,22 +104,22 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
           ))}
         </div>
 
-        <div className="flex-1 grid grid-cols-[1fr,400px] gap-12 overflow-y-auto pr-4">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-[1fr,400px] gap-6 md:gap-12 overflow-y-auto md:pr-4">
           <div className="space-y-12">
             <div>
               <div className="flex items-center gap-4 mb-6">
-                <span className="text-8xl font-display text-text-faint">0{selectedStage}</span>
+                <span className="text-5xl md:text-8xl font-display text-text-faint">0{selectedStage}</span>
                 <div>
-                  <h3 className="text-5xl">{detail.title}</h3>
+                  <h3 className="text-3xl md:text-5xl">{detail.title}</h3>
                   <span className="font-mono text-[10px] text-accent-yellow uppercase tracking-widest">Current Stage</span>
                 </div>
               </div>
-              <p className="text-2xl text-text-secondary leading-relaxed italic">
+              <p className="text-lg md:text-2xl text-text-secondary leading-relaxed italic">
                 {detail.description}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
               <div>
                 <h4 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-6">Key Actions</h4>
                 <ul className="space-y-4">

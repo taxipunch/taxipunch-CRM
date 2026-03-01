@@ -74,14 +74,14 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
         </div>
       )}
 
-      <div className="flex gap-2 mb-8 border-b border-border-subtle pb-4">
+      <div className="flex gap-2 mb-8 border-b border-border-subtle pb-4 overflow-x-auto scrollbar-hide flex-nowrap">
         {filters.map(f => {
           const count = getFilterCount(f);
           return (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 ${filter === f
+              className={`px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[44px] shrink-0 ${filter === f
                 ? "bg-accent-green text-bg-base font-bold"
                 : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
                 }`}
