@@ -190,7 +190,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       animate={{ opacity: 1 }}
       className="col-span-2"
     >
-      <ProviderCard provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+      <ProviderCard provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
     </motion.div>
   );
 
@@ -382,7 +382,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
               <div className="space-y-4">
                 <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
                 {providers.length > 0 ? providers.map(p => (
-                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                  <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                 )) : (
                   <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
                     <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
@@ -414,7 +414,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                     const isExpanded = expandedId === `outreach-${p.id}`;
                     return isExpanded ? (
                       <motion.div key={`expanded-${p.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
-                        <ProviderCard provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                        <ProviderCard provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                       </motion.div>
                     ) : (
                       <CollapsedCard
@@ -431,7 +431,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                 {/* Desktop */}
                 <div className="hidden md:grid grid-cols-2 gap-4">
                   {relevantUnassigned.map(p => (
-                    <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
+                    <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                   ))}
                 </div>
               </>
