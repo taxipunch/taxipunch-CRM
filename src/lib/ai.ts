@@ -86,9 +86,9 @@ Transcript: ${rawText}`,
     const parsed = JSON.parse(raw);
     console.log('Extraction parsed:', parsed);
     return { ...nullFields, ...parsed };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error extracting transcript fields:", error);
-    return nullFields;
+    throw new Error(error?.message || 'Extraction failed. Check your API key.');
   }
 }
 
