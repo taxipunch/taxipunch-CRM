@@ -125,9 +125,20 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         try {
             const result = await extractTranscriptFields(transcript.content);
             console.log('Setting fields:', result);
-            // Normalize niche to match select options (capitalized: "Handyman")
+            // Normalize niche — fuzzy match to predefined options
             if (result.niche && typeof result.niche === 'string') {
-                result.niche = result.niche.charAt(0).toUpperCase() + result.niche.slice(1).toLowerCase();
+                const raw = result.niche.toLowerCase();
+                const nicheMap: Record<string, string[]> = {
+                    'Handyman': ['handyman', 'drywall', 'tile', 'repair', 'general', 'maintenance'],
+                    'HVAC': ['hvac', 'heating', 'cooling', 'air conditioning', 'furnace'],
+                    'Plumber': ['plumb', 'pipe', 'drain', 'water'],
+                    'Cleaner': ['clean', 'janitorial', 'maid', 'housekeep'],
+                    'Electrician': ['electric', 'wiring', 'outlet', 'panel'],
+                };
+                const matched = Object.entries(nicheMap).find(([, keywords]) =>
+                    keywords.some(k => raw.includes(k))
+                );
+                result.niche = matched ? matched[0] : result.niche.charAt(0).toUpperCase() + result.niche.slice(1).toLowerCase();
             }
             // Normalize entity_type to lowercase to match select values
             if (result.entity_type && typeof result.entity_type === 'string') {

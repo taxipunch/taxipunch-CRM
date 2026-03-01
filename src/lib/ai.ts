@@ -12,7 +12,7 @@ function getAI() {
 export async function generateMorningBrief(activityData: any) {
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash",
       contents: `You are a business co-pilot for Joseph, who runs a local service provider network in Williamsport, PA. 
       
       Yesterday's activity: ${JSON.stringify(activityData)}
@@ -29,7 +29,7 @@ export async function generateMorningBrief(activityData: any) {
 export async function extractTranscript(rawText: string, callType: string) {
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash",
       contents: `You are extracting structured CRM data from a ${callType} call transcript for Joseph, who runs a local service provider network.
       
       Transcript: ${rawText}
@@ -67,7 +67,7 @@ export async function extractTranscriptFields(rawText: string) {
   const nullFields = { name: null, business_name: null, niche: null, phone: null, email: null, address: null, notes: null, entity_type: null };
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash",
       contents: `You are extracting structured data from a phone call transcript for a home services CRM in Williamsport PA. Return only valid JSON with no markdown, no backticks, no preamble.
 
 Extract these fields from the transcript: name, business_name, niche, phone, email, address, notes, entity_type (must be 'provider' or 'buyer'). Return null for any field not found.
@@ -95,7 +95,7 @@ Transcript: ${rawText}`,
 export async function generateOneSheets(provider: any, buyer: any) {
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash",
       contents: `Generate introduction documents for a match.
       
       Provider: ${JSON.stringify(provider)}
@@ -120,7 +120,7 @@ export async function generateOneSheets(provider: any, buyer: any) {
 export async function generateOneSheet(provider: any, buyer: any, niche: string) {
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash",
       contents: `You are writing a professional introduction brief for a local service marketplace in Williamsport PA. Be specific, warm, and concise. No corporate fluff.
 
 Write a one-page introduction brief connecting ${provider.business_name || provider.name} (${niche}) with ${buyer.org_name} (${buyer.units || 'unknown'} units, ${buyer.property_type || 'commercial'}). Include: a one paragraph intro for each party, why this match makes sense, and a suggested next step.
