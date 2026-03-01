@@ -31,7 +31,12 @@ export const IntroduceFlow: React.FC<IntroduceFlowProps> = ({ context, navigate 
 
   const handleGenerateOneSheet = async () => {
     setGeneratingOneSheet(true);
-    const result = await generateOneSheet(provider, buyer, niche);
+    const result = await generateOneSheet({
+      template: 'intro_buyer',
+      provider,
+      buyer,
+      territory: provider.territory_id || undefined,
+    });
     setOneSheet(result);
     setGeneratingOneSheet(false);
   };

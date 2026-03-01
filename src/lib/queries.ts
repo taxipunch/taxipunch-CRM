@@ -160,7 +160,7 @@ export async function importTranscriptToCRM(
     if (fields.email) record.email = fields.email;
     if (fields.address) record.address = fields.address;
     if (fields.notes) record.notes = fields.notes;
-    record.stage = 'research';
+    record.stage = 'prospect';
   } else {
     if (fields.name) record.contact_name = fields.name;
     if (fields.business_name) record.org_name = fields.business_name;
@@ -202,4 +202,14 @@ export async function saveOneSheet(providerId: string, buyerId: string, niche: s
       .insert({ provider_id: providerId, buyer_id: buyerId, niche, one_sheet: oneSheet, status: 'draft' });
     if (error) throw error;
   }
+}
+
+export async function saveProviderOneSheet(providerId: string, oneSheet: string) {
+  const { error } = await supabase.from('providers').update({ one_sheet: oneSheet }).eq('id', providerId);
+  if (error) throw error;
+}
+
+export async function saveIntroductionOneSheet(introductionId: string, oneSheet: string) {
+  const { error } = await supabase.from('introductions').update({ one_sheet: oneSheet }).eq('id', introductionId);
+  if (error) throw error;
 }

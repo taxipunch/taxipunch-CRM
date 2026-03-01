@@ -117,19 +117,138 @@ export async function generateOneSheets(provider: any, buyer: any) {
   }
 }
 
-export async function generateOneSheet(provider: any, buyer: any, niche: string) {
+type OneSheetTemplate = 'provider_profile' | 'overflow_pitch' | 'intro_provider' | 'intro_buyer';
+
+interface OneSheetContext {
+  template: OneSheetTemplate;
+  provider: any;
+  buyer?: any;
+  territory?: string;
+  openBuyerCount?: number;
+}
+
+function buildOneSheetPrompt(ctx: OneSheetContext): string {
+  const { template, provider, buyer, territory, openBuyerCount } = ctx;
+
+  switch (template) {
+    case 'provider_profile':
+      return `write a short one-sheet for a buyer introducing this service provider.
+provider: ${provider.business_name || provider.name}
+niche: ${provider.niche}
+territory: ${territory}
+review score: ${provider.review_score} stars from ${provider.review_count} reviews
+website: ${provider.website_built_url}
+notes: ${provider.notes}
+format:
+
+one line intro ("hey, thought this might be useful...")
+who they are (1-2 sentences, casual)
+why they're worth trusting (reviews, reliability, local)
+what they cover
+closing line with soft CTA ("let me know if you want an intro")
+
+lowercase throughout. no bullet points in output. short paragraphs.`;
+
+    case 'overflow_pitch':
+      return `write a short one-sheet pitching a bench provider on taking overflow work.
+provider: ${provider.business_name || provider.name}
+niche: ${provider.niche}
+territory: ${territory}
+open buyer demand: ${openBuyerCount} buyers currently needing ${provider.niche} work in this area
+format:
+
+one line hook ("hey, i've got more work coming in than i can place right now...")
+what the opportunity is (1-2 sentences)
+what you're offering (discounted monthly rate, overflow leads, no exclusivity pressure)
+soft CTA ("interested? let's talk")
+
+lowercase throughout. no bullet points in output. conversational.`;
+
+    case 'intro_provider':
+      return `write a short one-sheet for a service provider introducing a potential client.
+provider: ${provider.business_name || provider.name}
+niche: ${provider.niche}
+buyer org: ${buyer.org_name}
+buyer property type: ${buyer.property_type}
+buyer units: ${buyer.units}
+buyer notes: ${buyer.notes}
+territory: ${territory}
+format:
+
+one line opener ("hey, found someone who might need exactly what you do...")
+who the buyer is (1-2 sentences, what they manage, what they need)
+why it's a good fit for the provider
+soft CTA ("want me to make the connection?")
+
+lowercase throughout. no bullet points in output. short and warm.`;
+
+    case 'intro_buyer':
+      return `write a short one-sheet for a property manager introducing a vetted service provider.
+buyer: ${buyer.org_name}
+provider: ${provider.business_name || provider.name}
+niche: ${provider.niche}
+territory: ${territory}
+review score: ${provider.review_score} stars from ${provider.review_count} reviews
+website: ${provider.website_built_url}
+provider notes: ${provider.notes}
+format:
+
+one line opener ("hey, i know a guy...")
+who the provider is (1-2 sentences, what they do, how long, where)
+why they're trustworthy (reviews, local, vetted)
+soft CTA ("want me to set up a call?")
+
+lowercase throughout. no bullet points in output. warm and confident.`;
+  }
+}
+
+export async function generateOneSheet(context: OneSheetContext): Promise<string> {
+  const { template, provider, buyer } = context;
+
+  // Validate required fields per template
+  if (!provider) throw new Error('generateOneSheet: provider is required for all templates');
+  if ((template === 'intro_provider' || template === 'intro_buyer') && !buyer) {
+    throw new Error(`generateOneSheet: buyer is required for template "${template}"`);
+  }
+  if (template === 'overflow_pitch' && context.openBuyerCount == null) {
+    throw new Error('generateOneSheet: openBuyerCount is required for overflow_pitch template');
+  }
+
+  const userPrompt = buildOneSheetPrompt(context);
+  const systemPrompt = 'you write short, casual, lowercase outreach documents for a local service marketplace. no formal language. no capitalized sentences. warm and direct, like a text from someone who knows people. get to the point fast.';
+
   try {
-    const response = await getAI().models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `You are writing a professional introduction brief for a local service marketplace in Williamsport PA. Be specific, warm, and concise. No corporate fluff.
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+    if (!apiKey) throw new Error('Missing VITE_ANTHROPIC_API_KEY environment variable');
 
-Write a one-page introduction brief connecting ${provider.business_name || provider.name} (${niche}) with ${buyer.org_name} (${buyer.units || 'unknown'} units, ${buyer.property_type || 'commercial'}). Include: a one paragraph intro for each party, why this match makes sense, and a suggested next step.
-
-Write in plain text, no markdown. Use line breaks between sections. Keep the tone professional but human.`,
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
     });
-    return response.text || 'Unable to generate brief.';
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(`Anthropic API error ${res.status}: ${errBody}`);
+    }
+
+    const data = await res.json();
+    const raw: string = data.content?.[0]?.text || '';
+
+    // Strip markdown backticks if present
+    return raw.replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
   } catch (error) {
-    console.error("Error generating one-sheet:", error);
-    return "Unable to generate brief. Please try again.";
+    console.error('Error generating one-sheet:', error);
+    throw error;
   }
 }
