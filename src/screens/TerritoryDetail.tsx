@@ -266,19 +266,109 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
           <>
             {matches.length > 0 ? (
               <>
-                {/* Mobile: collapsed 2-col grid */}
-                <div className="md:hidden grid grid-cols-2 gap-2">
-                  {matches.map((match: any, i) => {
+                {/* Mobile: linked match pairs */}
+                <div className="md:hidden space-y-6">
+                  {matches.map((match: any) => {
                     const matchId = `match-${match.provider.id}-${match.niche}`;
                     const isExpanded = expandedId === matchId;
-                    return isExpanded ? renderExpandedMatch(match) : (
-                      <CollapsedCard
+                    return (
+                      <div
                         key={matchId}
-                        name={match.provider.business_name || match.provider.name}
-                        subtitle={match.niche}
-                        isExpanded={false}
-                        onTap={() => toggleExpand(matchId)}
-                      />
+                        onClick={() => toggleExpand(matchId)}
+                        className={`cursor-pointer transition-all ${isExpanded ? 'ring-1 ring-accent-green/20' : ''}`}
+                        style={{ borderRadius: '0.75rem' }}
+                      >
+                        {/* Provider card — flat bottom */}
+                        <div className="bg-bg-card border border-border-subtle rounded-xl rounded-b-none p-4">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-medium truncate">{match.provider.business_name || match.provider.name}</p>
+                            <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded shrink-0 ml-2">{match.provider.niche}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-mono text-[10px] text-text-muted uppercase">{match.provider.stage || 'provider'}</span>
+                            {isOverdue(match.provider.last_contact) && <span className="w-1.5 h-1.5 rounded-full bg-accent-red" />}
+                          </div>
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="pt-3 mt-3 border-t border-border-subtle space-y-2">
+                                  {match.provider.phone && (
+                                    <div className="flex items-center gap-2 text-text-secondary">
+                                      <Phone size={11} />
+                                      <a href={`tel:${match.provider.phone}`} onClick={e => e.stopPropagation()} className="font-mono text-[11px] hover:text-accent-green">{match.provider.phone}</a>
+                                    </div>
+                                  )}
+                                  {match.provider.email && (
+                                    <div className="flex items-center gap-2 text-text-secondary">
+                                      <Mail size={11} />
+                                      <span className="font-mono text-[11px]">{match.provider.email}</span>
+                                    </div>
+                                  )}
+                                  {match.provider.review_score != null && (
+                                    <div className="flex items-center gap-1">
+                                      <Star size={10} className="text-accent-yellow fill-accent-yellow" />
+                                      <span className="text-sm font-semibold">{match.provider.review_score}</span>
+                                      {match.provider.review_count != null && <span className="font-mono text-[10px] text-text-muted">({match.provider.review_count})</span>}
+                                    </div>
+                                  )}
+                                  <span className="font-mono text-[10px] text-text-muted block">Last: {match.provider.last_contact ? new Date(match.provider.last_contact).toLocaleDateString() : 'Never'}</span>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        {/* Connector */}
+                        <div className="flex flex-col items-center bg-bg-base -my-px">
+                          <div className="border-l-2 border-accent-green h-4" />
+                          <span className="font-mono text-[9px] uppercase text-accent-green tracking-widest py-0.5">● match</span>
+                          <div className="border-l-2 border-accent-green h-4" />
+                        </div>
+
+                        {/* Buyer card — flat top */}
+                        <div className="bg-bg-card border border-border-subtle rounded-xl rounded-t-none border-t-0 p-4">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-medium truncate">{match.buyer.org_name}</p>
+                            <span className="font-mono text-[10px] text-accent-blue uppercase shrink-0 ml-2">{match.buyer.property_type}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-mono text-[10px] text-text-muted uppercase">{match.buyer.stage || 'buyer'}</span>
+                            <span className="font-mono text-[10px] text-text-muted">Needs: {match.niche}</span>
+                          </div>
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="pt-3 mt-3 border-t border-border-subtle space-y-2">
+                                  {match.buyer.contact_name && <span className="font-mono text-[11px] text-text-secondary block">{match.buyer.contact_name} · {match.buyer.units} units</span>}
+                                  {(match.buyer as any).phone && (
+                                    <div className="flex items-center gap-2 text-text-secondary">
+                                      <Phone size={11} />
+                                      <span className="font-mono text-[11px]">{(match.buyer as any).phone}</span>
+                                    </div>
+                                  )}
+                                  <span className="font-mono text-[10px] text-text-muted block">Last: {match.buyer.last_contact ? new Date(match.buyer.last_contact).toLocaleDateString() : 'Never'}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); navigate('INTRODUCE_FLOW', { provider: match.provider, buyer: match.buyer, niche: match.niche }); }}
+                                    className="w-full bg-accent-green text-bg-base font-mono text-[10px] font-bold py-2 rounded-full uppercase tracking-wider mt-2"
+                                  >
+                                    Introduce
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -340,38 +430,123 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
         {/* ===== FOLLOW-UP TAB ===== */}
         {activeTab === 'FOLLOW-UP' && (
           <>
-            {/* Mobile: collapsed 2-col grid mixing providers and buyers */}
+            {/* Mobile: full-width stacked cards */}
             <div className="md:hidden space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Providers</h5>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {providers.map(p => {
-                  const isExpanded = expandedId === `provider-${p.id}`;
-                  return isExpanded ? renderExpandedProvider(p) : (
-                    <CollapsedCard
+                  const isExp = expandedId === `provider-${p.id}`;
+                  const overdue = isOverdue(p.last_contact);
+                  return (
+                    <div
                       key={p.id}
-                      name={p.business_name || p.name}
-                      subtitle={p.niche || p.stage}
-                      isExpanded={false}
-                      overdue={isOverdue(p.last_contact)}
-                      onTap={() => toggleExpand(`provider-${p.id}`)}
-                    />
+                      onClick={() => toggleExpand(`provider-${p.id}`)}
+                      className={`bg-bg-card border border-border-subtle rounded-xl p-4 cursor-pointer transition-all ${isExp ? 'ring-1 ring-accent-green/20' : ''}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {overdue && <span className="w-1.5 h-1.5 rounded-full bg-accent-red flex-shrink-0" />}
+                          <p className="text-sm truncate">{p.business_name || p.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {overdue && <span className="font-mono text-[9px] text-accent-red uppercase">Overdue</span>}
+                          <span className="font-mono text-[10px] text-accent-green uppercase">{p.niche || p.stage}</span>
+                        </div>
+                      </div>
+                      <AnimatePresence>
+                        {isExp && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-3 mt-3 border-t border-border-subtle space-y-2">
+                              {p.phone && (
+                                <div className="flex items-center gap-2 text-text-secondary">
+                                  <Phone size={11} />
+                                  <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="font-mono text-[11px] hover:text-accent-green">{p.phone}</a>
+                                </div>
+                              )}
+                              {p.email && (
+                                <div className="flex items-center gap-2 text-text-secondary">
+                                  <Mail size={11} />
+                                  <span className="font-mono text-[11px]">{p.email}</span>
+                                </div>
+                              )}
+                              <span className="font-mono text-[10px] text-text-muted block">Last: {p.last_contact ? new Date(p.last_contact).toLocaleDateString() : 'Never'}</span>
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  onClick={async (e) => { e.stopPropagation(); await handleLogProviderContact(p.id); }}
+                                  className="flex-1 text-accent-blue font-mono text-[10px] uppercase py-1.5 border border-accent-blue/30 rounded-full"
+                                >Log Contact</button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate('PROVIDER_DETAIL', { providerId: p.id }); }}
+                                  className="flex-1 text-text-muted font-mono text-[10px] uppercase py-1.5 border border-border-subtle rounded-full"
+                                >View</button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   );
                 })}
               </div>
 
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest pt-4">Buyers</h5>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {buyers.map(b => {
-                  const isExpanded = expandedId === `buyer-${b.id}`;
-                  return isExpanded ? renderExpandedBuyer(b) : (
-                    <CollapsedCard
+                  const isExp = expandedId === `buyer-${b.id}`;
+                  const overdue = isOverdue(b.last_contact);
+                  return (
+                    <div
                       key={b.id}
-                      name={b.org_name}
-                      subtitle={b.property_type || b.stage}
-                      isExpanded={false}
-                      overdue={isOverdue(b.last_contact)}
-                      onTap={() => toggleExpand(`buyer-${b.id}`)}
-                    />
+                      onClick={() => toggleExpand(`buyer-${b.id}`)}
+                      className={`bg-bg-card border border-border-subtle rounded-xl p-4 cursor-pointer transition-all ${isExp ? 'ring-1 ring-accent-green/20' : ''}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {overdue && <span className="w-1.5 h-1.5 rounded-full bg-accent-red flex-shrink-0" />}
+                          <p className="text-sm truncate">{b.org_name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {overdue && <span className="font-mono text-[9px] text-accent-red uppercase">Overdue</span>}
+                          <span className="font-mono text-[10px] text-accent-blue uppercase">{b.property_type || b.stage}</span>
+                        </div>
+                      </div>
+                      <AnimatePresence>
+                        {isExp && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-3 mt-3 border-t border-border-subtle space-y-2">
+                              {b.contact_name && <span className="font-mono text-[11px] text-text-secondary block">{b.contact_name} · {b.units} units</span>}
+                              {(b as any).phone && (
+                                <div className="flex items-center gap-2 text-text-secondary">
+                                  <Phone size={11} />
+                                  <span className="font-mono text-[11px]">{(b as any).phone}</span>
+                                </div>
+                              )}
+                              <span className="font-mono text-[10px] text-text-muted block">Last: {b.last_contact ? new Date(b.last_contact).toLocaleDateString() : 'Never'}</span>
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  onClick={async (e) => { e.stopPropagation(); await handleLogBuyerContact(b.id); }}
+                                  className="flex-1 text-accent-blue font-mono text-[10px] uppercase py-1.5 border border-accent-blue/30 rounded-full"
+                                >Log Contact</button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate('BUYER_DETAIL', { buyerId: b.id }); }}
+                                  className="flex-1 text-text-muted font-mono text-[10px] uppercase py-1.5 border border-border-subtle rounded-full"
+                                >View</button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   );
                 })}
               </div>
@@ -414,22 +589,52 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 
             {relevantUnassigned.length > 0 ? (
               <>
-                {/* Mobile: collapsed 2-col grid */}
-                <div className="md:hidden grid grid-cols-2 gap-2">
+                {/* Mobile: full-width stacked cards */}
+                <div className="md:hidden space-y-2">
                   {relevantUnassigned.map(p => {
-                    const isExpanded = expandedId === `outreach-${p.id}`;
-                    return isExpanded ? (
-                      <motion.div key={`expanded-${p.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-2">
-                        <ProviderCard provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
-                      </motion.div>
-                    ) : (
-                      <CollapsedCard
+                    const isExp = expandedId === `outreach-${p.id}`;
+                    return (
+                      <div
                         key={p.id}
-                        name={p.business_name || p.name}
-                        subtitle={p.niche || 'unknown'}
-                        isExpanded={false}
-                        onTap={() => toggleExpand(`outreach-${p.id}`)}
-                      />
+                        onClick={() => toggleExpand(`outreach-${p.id}`)}
+                        className={`bg-bg-card border border-border-subtle rounded-xl p-4 cursor-pointer transition-all ${isExp ? 'ring-1 ring-accent-green/20' : ''}`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm truncate">{p.business_name || p.name}</p>
+                          <span className="font-mono text-[10px] text-accent-green uppercase shrink-0 ml-2">{p.niche || 'unknown'}</span>
+                        </div>
+                        <AnimatePresence>
+                          {isExp && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pt-3 mt-3 border-t border-border-subtle space-y-2">
+                                {p.phone && (
+                                  <div className="flex items-center gap-2 text-text-secondary">
+                                    <Phone size={11} />
+                                    <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="font-mono text-[11px] hover:text-accent-green">{p.phone}</a>
+                                  </div>
+                                )}
+                                {p.email && (
+                                  <div className="flex items-center gap-2 text-text-secondary">
+                                    <Mail size={11} />
+                                    <span className="font-mono text-[11px]">{p.email}</span>
+                                  </div>
+                                )}
+                                {p.address && <span className="font-mono text-[10px] text-text-muted block">{p.address}</span>}
+                                <span className="font-mono text-[10px] text-text-muted block">Stage: {p.stage}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate('PROVIDER_DETAIL', { providerId: p.id }); }}
+                                  className="w-full text-text-muted font-mono text-[10px] uppercase py-1.5 border border-border-subtle rounded-full mt-1"
+                                >View Profile</button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     );
                   })}
                 </div>
