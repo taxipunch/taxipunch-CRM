@@ -1,10 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+// Lazy-init: only construct when actually called (avoids crashing at import time in browser)
+let _ai: InstanceType<typeof GoogleGenAI> | null = null;
+function getAI() {
+  if (!_ai) {
+    _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  }
+  return _ai;
+}
 
 export async function generateMorningBrief(activityData: any) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash-exp",
       contents: `You are a business co-pilot for Joseph, who runs a local service provider network in Williamsport, PA. 
       
@@ -21,7 +28,7 @@ export async function generateMorningBrief(activityData: any) {
 
 export async function extractTranscript(rawText: string, callType: string) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash-exp",
       contents: `You are extracting structured CRM data from a ${callType} call transcript for Joseph, who runs a local service provider network.
       
@@ -58,7 +65,7 @@ export async function extractTranscript(rawText: string, callType: string) {
 
 export async function generateOneSheets(provider: any, buyer: any) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.0-flash-exp",
       contents: `Generate introduction documents for a match.
       

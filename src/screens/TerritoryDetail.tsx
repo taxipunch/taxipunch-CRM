@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail } from 'lucide-react';
+import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Provider, Buyer } from '../types';
 
@@ -15,9 +15,12 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   const [providers, setProviders] = useState<Provider[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const [tRes, pRes, bRes] = await Promise.all([
         supabase.from('territories').select('*').eq('id', territoryId).single(),
         supabase.from('providers').select('*').eq('territory_id', territoryId),
@@ -27,14 +30,32 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
       setTerritory(tRes.data);
       setProviders(pRes.data || []);
       setBuyers(bRes.data || []);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't load territory details. Check your connection and try again.");
+    } finally {
       setLoading(false);
     }
-    load();
   }, [territoryId]);
 
-  if (loading) return <div className="p-8 animate-pulse">Loading...</div>;
+  useEffect(() => { load(); }, [load]);
 
-  const matches = buyers.flatMap(b => 
+  if (loading) return <div className="p-8 animate-pulse">Loading...</div>;
+  if (error) return (
+    <div className="p-8">
+      <div className="flex items-center justify-between p-4 bg-accent-red/5 border border-accent-red/20 rounded-xl">
+        <p className="text-sm text-accent-red">{error}</p>
+        <button
+          onClick={load}
+          className="flex items-center gap-2 px-4 py-1.5 bg-accent-red/10 text-accent-red font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/20 transition-colors"
+        >
+          <RefreshCw size={12} /> Retry
+        </button>
+      </div>
+    </div>
+  );
+
+  const matches = buyers.flatMap(b =>
     (b as any).buyer_needs
       ?.filter((n: any) => !n.filled)
       .map((n: any) => {
@@ -53,7 +74,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <button 
+      <button
         onClick={() => navigate('TERRITORY_HEALTH')}
         className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-8 group"
       >
@@ -82,7 +103,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             className={`pb-4 px-2 relative transition-all group`}
           >
             <div className="flex items-center gap-2">
-              <span className={`font-mono text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'text-text-primary' : 'text-text-secondary'}`}>
+              <span className={`font-mono text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
                 {tab.label}
               </span>
               <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-bg-card border border-border-subtle ${tab.color}`}>
@@ -90,9 +111,9 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
               </span>
             </div>
             {activeTab === tab.id && (
-              <motion.div 
+              <motion.div
                 layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green" 
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-green"
               />
             )}
           </button>
@@ -119,7 +140,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                     <div className="w-10 h-10 rounded-full border border-accent-green flex items-center justify-center text-accent-green">
                       <ArrowRight size={20} />
                     </div>
-                    <button 
+                    <button
                       onClick={() => navigate('INTRODUCE_FLOW', { provider: match.provider, buyer: match.buyer, niche: match.niche })}
                       className="bg-accent-green text-bg-base font-mono text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider hover:scale-105 transition-transform"
                     >

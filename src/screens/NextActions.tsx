@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { RefreshCw } from 'lucide-react';
 import { getActionItems } from '../lib/queries';
 import { ActionItem } from '../types';
 import { cn } from '../lib/utils';
@@ -14,23 +15,31 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [filter, setFilter] = useState(filterType || 'ALL');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await getActionItems();
-        setActions(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getActionItems();
+      setActions(data);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't load actions. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
 
-  const filteredActions = actions.filter(a => 
+  useEffect(() => { load(); }, [load]);
+
+  const getFilteredCount = (filterId: string) => {
+    if (filterId === 'ALL') return actions.length;
+    return actions.filter(a => a.type.toUpperCase().includes(filterId)).length;
+  };
+
+  const filteredActions = actions.filter(a =>
     filter === 'ALL' || a.type.toUpperCase().includes(filter)
   );
 
@@ -51,28 +60,53 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
           <span className="font-mono text-xs text-text-secondary uppercase tracking-widest">
             Daily Inbox · {actions.length} Pending
           </span>
-          <div className="flex gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent-red" />
-            <span className="font-mono text-[10px] text-accent-red uppercase">{actions.filter(a => a.priority === 'high').length} High Priority</span>
-          </div>
+          {actions.filter(a => a.priority === 'high').length > 0 && (
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent-red" />
+              <span className="font-mono text-[10px] text-accent-red uppercase">{actions.filter(a => a.priority === 'high').length} High Priority</span>
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-        {filters.map(f => (
+      {/* Error State */}
+      {error && (
+        <div className="flex items-center justify-between p-4 mb-8 bg-accent-red/5 border border-accent-red/20 rounded-xl">
+          <p className="text-sm text-accent-red">{error}</p>
           <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={cn(
-              "px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all whitespace-nowrap",
-              filter === f.id 
-                ? "bg-text-primary text-bg-base font-bold" 
-                : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
-            )}
+            onClick={load}
+            className="flex items-center gap-2 px-4 py-1.5 bg-accent-red/10 text-accent-red font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/20 transition-colors"
           >
-            {f.label}
+            <RefreshCw size={12} /> Retry
           </button>
-        ))}
+        </div>
+      )}
+
+      {/* Filters with counts */}
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+        {filters.map(f => {
+          const count = getFilteredCount(f.id);
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={cn(
+                "px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5",
+                filter === f.id
+                  ? "bg-text-primary text-bg-base font-bold"
+                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+              )}
+            >
+              {f.label}
+              <span className={cn(
+                "text-[9px] px-1 rounded",
+                filter === f.id ? "text-bg-base/70" : "text-text-muted"
+              )}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="space-y-3">
@@ -80,6 +114,10 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
           [1, 2, 3].map(i => (
             <div key={i} className="h-20 bg-bg-card border border-border-subtle rounded-xl animate-pulse" />
           ))
+        ) : filteredActions.length === 0 ? (
+          <div className="py-16 text-center border border-dashed border-border-subtle rounded-xl">
+            <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No actions match this filter</p>
+          </div>
         ) : (
           <AnimatePresence mode="popLayout">
             {filteredActions.map((action) => (
@@ -90,7 +128,7 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <ActionCard 
+                <ActionCard
                   action={action}
                   isExpanded={expandedId === action.id}
                   onToggle={() => setExpandedId(expandedId === action.id ? null : action.id)}
@@ -104,10 +142,3 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
     </div>
   );
 };
-
-const TrendingUp = ({ size, className }: { size: number, className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-    <polyline points="17 6 23 6 23 12" />
-  </svg>
-);

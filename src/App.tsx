@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './screens/Dashboard';
 import { TerritoryHealth } from './screens/TerritoryHealth';
 import { NextActions } from './screens/NextActions';
 import { TerritoryDetail } from './screens/TerritoryDetail';
-import { IntroduceFlow } from './screens/IntroduceFlow';
-import { RoadmapModal } from './screens/RoadmapModal';
 import { getActionItems, getDashboardStats } from './lib/queries';
+
+// Lazy-load screens that import heavy/server-side dependencies
+const IntroduceFlow = React.lazy(() => import('./screens/IntroduceFlow').then(m => ({ default: m.IntroduceFlow })));
+const RoadmapModal = React.lazy(() => import('./screens/RoadmapModal').then(m => ({ default: m.RoadmapModal })));
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('DASHBOARD');
@@ -49,7 +51,7 @@ export default function App() {
       case 'NEXT_ACTIONS':
         return <NextActions navigate={navigate} filterType={screenContext.filterType} />;
       case 'INTRODUCE_FLOW':
-        return <IntroduceFlow context={screenContext} navigate={navigate} />;
+        return <Suspense fallback={null}><IntroduceFlow context={screenContext} navigate={navigate} /></Suspense>;
       default:
         return <Dashboard navigate={navigate} />;
     }
@@ -57,19 +59,21 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex">
-      <Sidebar 
-        currentScreen={currentScreen} 
-        onNavigate={navigate} 
-        pendingActions={pendingActions} 
+      <Sidebar
+        currentScreen={currentScreen}
+        onNavigate={navigate}
+        pendingActions={pendingActions}
         mrr={mrr}
       />
-      
-      <main className="flex-1 md:ml-[200px] pb-16 md:pb-0 min-h-screen relative">
+
+      <main className="flex-1 md:ml-[220px] pb-16 md:pb-0 min-h-screen relative">
         {renderScreen()}
       </main>
 
       {showRoadmap && (
-        <RoadmapModal onClose={() => setShowRoadmap(false)} />
+        <Suspense fallback={null}>
+          <RoadmapModal onClose={() => setShowRoadmap(false)} />
+        </Suspense>
       )}
     </div>
   );

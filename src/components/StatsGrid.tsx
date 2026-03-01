@@ -17,16 +17,16 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {statItems.map((item, i) => (
-        <div key={i} className="bg-bg-card border border-border-subtle p-6 rounded-xl hover:bg-bg-card-hover transition-colors">
-          <div className="flex justify-between items-start mb-4">
-            <div className={cn("p-2 rounded-lg bg-bg-surface border border-border-subtle", item.color)}>
-              <item.icon size={18} />
+        <div key={i} className="bg-bg-card border border-border-subtle p-4 rounded-xl hover:bg-bg-card-hover transition-colors">
+          <div className="flex justify-between items-start mb-3">
+            <div className={cn("p-1.5 rounded-lg bg-bg-surface", item.color)}>
+              <item.icon size={14} />
             </div>
           </div>
-          <div className="text-3xl mb-1">{item.value}</div>
-          <div className="font-mono text-[10px] text-text-secondary uppercase tracking-wider">{item.label}</div>
+          <div className="text-2xl mb-0.5">{item.value}</div>
+          <div className="font-mono text-[9px] text-text-muted uppercase tracking-wider">{item.label}</div>
         </div>
       ))}
     </div>

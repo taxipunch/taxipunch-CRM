@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle2, Circle, ExternalLink, ArrowRight } from 'lucide-react';
 
@@ -8,6 +8,15 @@ interface RoadmapModalProps {
 
 export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
   const [selectedStage, setSelectedStage] = useState(3);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   const milestones = [
     { id: 1, title: 'First site live', status: 'done' },
@@ -47,11 +56,12 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] bg-bg-base/95 backdrop-blur-xl flex items-center justify-center p-8"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="max-w-6xl w-full h-full flex flex-col">
         <header className="flex justify-between items-center mb-12">
@@ -59,7 +69,7 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
             <h2 className="text-5xl mb-2">Network Roadmap</h2>
             <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">The path to $10k MRR</p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-4 rounded-full bg-bg-card border border-border-subtle hover:text-accent-red transition-colors"
           >
@@ -136,7 +146,7 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({ onClose }) => {
             <h4 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Resources</h4>
             <div className="space-y-3">
               {detail.resources.map((res: any, i: number) => (
-                <a 
+                <a
                   key={i}
                   href={res.link}
                   className="flex items-center justify-between p-4 bg-bg-card border border-border-subtle rounded-xl hover:border-border-active transition-all group"

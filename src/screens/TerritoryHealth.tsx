@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { RefreshCw } from 'lucide-react';
 import { getTerritories, getProviders, getBuyers } from '../lib/queries';
 import { computeTerritorySignals } from '../lib/signals';
 import { TerritoryCard } from '../components/TerritoryCard';
@@ -13,28 +14,31 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [tData, pData, bData] = await Promise.all([
-          getTerritories(),
-          getProviders(),
-          getBuyers()
-        ]);
-        
-        const enriched = tData.map(t => computeTerritorySignals(t, pData, bData));
-        setTerritories(enriched);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [tData, pData, bData] = await Promise.all([
+        getTerritories(),
+        getProviders(),
+        getBuyers()
+      ]);
+
+      const enriched = tData.map(t => computeTerritorySignals(t, pData, bData));
+      setTerritories(enriched);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't load territories. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
 
-  const filteredTerritories = territories.filter(t => 
+  useEffect(() => { load(); }, [load]);
+
+  const filteredTerritories = territories.filter(t =>
     filter === 'ALL' || t.signal === filter
   ).sort((a, b) => {
     const priority: Record<string, number> = { BUILD: 0, GROW: 1, WATCH: 2, COLD: 3 };
@@ -42,6 +46,11 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
   });
 
   const filters = ['ALL', 'BUILD', 'GROW', 'WATCH', 'COLD'];
+
+  const getFilterCount = (f: string) => {
+    if (f === 'ALL') return territories.length;
+    return territories.filter(t => t.signal === f).length;
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -52,20 +61,38 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
         </p>
       </header>
 
-      <div className="flex gap-2 mb-8 border-b border-border-subtle pb-4">
-        {filters.map(f => (
+      {/* Error State */}
+      {error && (
+        <div className="flex items-center justify-between p-4 mb-8 bg-accent-red/5 border border-accent-red/20 rounded-xl">
+          <p className="text-sm text-accent-red">{error}</p>
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all ${
-              filter === f 
-                ? "bg-accent-green text-bg-base font-bold" 
-                : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
-            }`}
+            onClick={load}
+            className="flex items-center gap-2 px-4 py-1.5 bg-accent-red/10 text-accent-red font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/20 transition-colors"
           >
-            {f}
+            <RefreshCw size={12} /> Retry
           </button>
-        ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 mb-8 border-b border-border-subtle pb-4">
+        {filters.map(f => {
+          const count = getFilterCount(f);
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 ${filter === f
+                  ? "bg-accent-green text-bg-base font-bold"
+                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                }`}
+            >
+              {f}
+              <span className={`text-[9px] ${filter === f ? "text-bg-base/70" : "text-text-muted"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
@@ -75,7 +102,7 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
           ))}
         </div>
       ) : (
-        <motion.div 
+        <motion.div
           layout
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
@@ -89,8 +116,8 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
               >
-                <TerritoryCard 
-                  territory={t} 
+                <TerritoryCard
+                  territory={t}
                   onClick={() => navigate('TERRITORY_DETAIL', { territoryId: t.id })}
                 />
               </motion.div>

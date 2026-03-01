@@ -9,7 +9,7 @@ interface MorningBriefProps {
 
 export const MorningBrief: React.FC<MorningBriefProps> = ({ text, isExpanded, onToggle }) => {
   return (
-    <div 
+    <div
       className={cn(
         "bg-bg-card border border-border-subtle rounded-2xl p-6 cursor-pointer transition-all hover:border-border-active group",
         isExpanded ? "shadow-2xl shadow-accent-blue/5" : ""
@@ -23,8 +23,8 @@ export const MorningBrief: React.FC<MorningBriefProps> = ({ text, isExpanded, on
         </span>
       </div>
       <p className={cn(
-        "text-xl leading-relaxed transition-all duration-500",
-        isExpanded ? "" : "line-clamp-1 opacity-60"
+        "text-lg leading-relaxed transition-all duration-500",
+        isExpanded ? "" : "line-clamp-1"
       )}>
         {text || "Analyzing yesterday's activity..."}
       </p>

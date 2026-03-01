@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardStats } from '../lib/queries';
 import { format } from 'date-fns';
+import { RefreshCw } from 'lucide-react';
 import { MorningBrief } from '../components/MorningBrief';
 import { RecommendationCard } from '../components/RecommendationCard';
 import { MilestoneBar } from '../components/MilestoneBar';
@@ -15,56 +16,83 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
   const [brief, setBrief] = useState<string>('');
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [sData, bData] = await Promise.all([
-          getDashboardStats(),
-          // In a real app, we'd fetch recent activity first
-          Promise.resolve("Yesterday was productive. 3 new transcripts reviewed.")
-        ]);
-        setStats(sData);
-        setBrief(bData);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [sData, bData] = await Promise.all([
+        getDashboardStats(),
+        Promise.resolve("Yesterday was productive. 3 new transcripts reviewed.")
+      ]);
+      setStats(sData);
+      setBrief(bData);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't load dashboard data. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <header className="mb-12">
-        <span className="font-mono text-[10px] text-text-secondary uppercase tracking-[0.3em] block mb-2">
-          {format(new Date(), 'EEEE · MMMM do, yyyy')}
-        </span>
-        <h2 className="text-4xl md:text-6xl">Good morning, Joseph.</h2>
+      <header className="mb-6">
+        <div className="flex items-baseline gap-3 mb-1">
+          <h2 className="text-2xl md:text-3xl">Good morning, Joseph.</h2>
+          <span className="font-mono text-[10px] text-text-muted uppercase tracking-[0.2em]">
+            {format(new Date(), 'EEEE · MMM do')}
+          </span>
+        </div>
       </header>
 
+      {/* Error State */}
+      {error && (
+        <section className="mb-6">
+          <div className="flex items-center justify-between p-4 bg-accent-red/5 border border-accent-red/20 rounded-xl">
+            <p className="text-sm text-accent-red">{error}</p>
+            <button
+              onClick={load}
+              className="flex items-center gap-2 px-4 py-1.5 bg-accent-red/10 text-accent-red font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/20 transition-colors"
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Morning Brief */}
-      <section className="mb-12">
-        <MorningBrief 
-          text={brief} 
-          isExpanded={isBriefExpanded} 
-          onToggle={() => setIsBriefExpanded(!isBriefExpanded)} 
-        />
+      <section className="mb-6">
+        {loading ? (
+          <div className="h-20 bg-bg-card border border-border-subtle rounded-2xl animate-pulse" />
+        ) : (
+          <MorningBrief
+            text={brief}
+            isExpanded={isBriefExpanded}
+            onToggle={() => setIsBriefExpanded(!isBriefExpanded)}
+          />
+        )}
       </section>
 
       {/* Recommendation Card */}
-      <section className="mb-12">
-        <RecommendationCard 
-          title="Introduce John's HVAC to Loyalsock Property Management"
-          description="Loyalsock just flagged an urgent HVAC need for 40 units. John has a 100% response rate and is active in that territory. This intro has a high probability of conversion to MRR."
-          onClick={() => navigate('NEXT_ACTIONS', { filterType: 'MATCH' })}
-        />
+      <section className="mb-8">
+        {loading ? (
+          <div className="h-52 bg-bg-card border border-border-subtle rounded-2xl animate-pulse" />
+        ) : (
+          <RecommendationCard
+            title="Introduce John's HVAC to Loyalsock Property Management"
+            description="Loyalsock just flagged an urgent HVAC need for 40 units. John has a 100% response rate and is active in that territory. This intro has a high probability of conversion to MRR."
+            onClick={() => navigate('NEXT_ACTIONS', { filterType: 'MATCH' })}
+          />
+        )}
       </section>
 
       {/* Milestone Bar */}
-      <section className="mb-12">
-        <MilestoneBar 
+      <section className="mb-8">
+        <MilestoneBar
           currentMilestone="First Provider Yes"
           progress={33}
           onClick={() => navigate('ROADMAP')}
@@ -73,7 +101,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
 
       {/* Stats Grid */}
       <section>
-        <StatsGrid stats={stats} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-24 bg-bg-card border border-border-subtle rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <StatsGrid stats={stats} />
+        )}
       </section>
     </div>
   );

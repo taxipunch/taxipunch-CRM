@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, AlertCircle, MessageSquare, Link as LinkIcon, ArrowRight, TrendingUp, FileText } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MessageSquare, Link as LinkIcon, ArrowRight, TrendingUp, FileText, Loader2, Check } from 'lucide-react';
 import { ActionItem } from '../types';
 import { cn } from '../lib/utils';
 
@@ -12,6 +12,17 @@ interface ActionCardProps {
 }
 
 export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onToggle, onNavigate }) => {
+  const [buttonState, setButtonState] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  const handleAction = (callback?: () => void) => {
+    if (buttonState !== 'idle') return;
+    setButtonState('loading');
+    setTimeout(() => {
+      setButtonState('done');
+      if (callback) callback();
+      setTimeout(() => setButtonState('idle'), 1500);
+    }, 800);
+  };
   const getIcon = (type: string) => {
     switch (type) {
       case 'transcript_review': return <MessageSquare size={18} className="text-accent-blue" />;
@@ -37,7 +48,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
       "bg-bg-card border border-border-subtle rounded-xl overflow-hidden transition-all",
       isExpanded ? "ring-1 ring-border-active" : "hover:bg-bg-card-hover"
     )}>
-      <div 
+      <div
         className="p-4 flex items-center gap-4 cursor-pointer"
         onClick={onToggle}
       >
@@ -74,13 +85,19 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
                     <span className="text-sm">HVAC, Plumbing</span>
                   </div>
                 </div>
-                <textarea 
+                <textarea
                   placeholder="Add reviewer comments..."
                   className="w-full bg-bg-card border border-border-subtle rounded-lg p-3 text-sm font-serif focus:outline-none focus:border-border-active min-h-[80px]"
                 />
                 <div className="flex gap-3">
-                  <button className="flex-1 bg-accent-blue text-bg-base font-mono text-[10px] font-bold py-2 rounded uppercase tracking-wider">
-                    Approve & Add to CRM
+                  <button
+                    onClick={() => handleAction()}
+                    disabled={buttonState !== 'idle'}
+                    className="flex-1 bg-accent-blue text-bg-base font-mono text-[10px] font-bold py-2 rounded uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
+                  >
+                    {buttonState === 'loading' && <Loader2 size={12} className="animate-spin" />}
+                    {buttonState === 'done' && <Check size={12} />}
+                    {buttonState === 'done' ? 'Added ✓' : 'Approve & Add to CRM'}
                   </button>
                   <button className="px-4 border border-border-subtle text-text-secondary font-mono text-[10px] uppercase hover:text-accent-red transition-colors">
                     Flag
@@ -105,11 +122,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
                     <span className="text-lg">Loyalsock Mgmt</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => onNavigate?.('INTRODUCE_FLOW')}
-                  className="w-full bg-accent-green text-bg-base font-mono text-[10px] font-bold py-3 rounded uppercase tracking-wider"
+                <button
+                  onClick={() => handleAction(() => onNavigate?.('INTRODUCE_FLOW'))}
+                  disabled={buttonState !== 'idle'}
+                  className="w-full bg-accent-green text-bg-base font-mono text-[10px] font-bold py-3 rounded uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
                 >
-                  Generate Intro Docs
+                  {buttonState === 'loading' && <Loader2 size={12} className="animate-spin" />}
+                  {buttonState === 'done' && <Check size={12} />}
+                  {buttonState === 'done' ? 'Generated ✓' : 'Generate Intro Docs'}
                 </button>
               </div>
             )}
@@ -120,8 +140,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
                   <p className="text-sm text-accent-yellow italic">"Hey, just checking in on that HVAC project we discussed last week..."</p>
                 </div>
                 <div className="flex gap-3">
-                  <button className="flex-1 bg-accent-yellow text-bg-base font-mono text-[10px] font-bold py-2 rounded uppercase tracking-wider">
-                    Generate Follow-up Doc
+                  <button
+                    onClick={() => handleAction()}
+                    disabled={buttonState !== 'idle'}
+                    className="flex-1 bg-accent-yellow text-bg-base font-mono text-[10px] font-bold py-2 rounded uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
+                  >
+                    {buttonState === 'loading' && <Loader2 size={12} className="animate-spin" />}
+                    {buttonState === 'done' && <Check size={12} />}
+                    {buttonState === 'done' ? 'Generated ✓' : 'Generate Follow-up Doc'}
                   </button>
                   <button className="flex-1 border border-border-subtle text-text-secondary font-mono text-[10px] uppercase py-2 rounded">
                     Log Contact
