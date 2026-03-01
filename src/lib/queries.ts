@@ -34,19 +34,23 @@ export async function getTranscripts() {
 }
 
 export async function getDashboardStats() {
-  const [providers, buyers, introductions, territories] = await Promise.all([
+  const MONTHLY_RATE = 297;
+  const [providers, buyers, introductions, territories, activeProviders] = await Promise.all([
     supabase.from('providers').select('id', { count: 'exact' }),
     supabase.from('buyers').select('id', { count: 'exact' }),
     supabase.from('introductions').select('id', { count: 'exact' }),
     supabase.from('territories').select('id', { count: 'exact' }),
+    supabase.from('providers').select('id', { count: 'exact' }).eq('stage', 'active'),
   ]);
+
+  const activeCount = activeProviders.count || 0;
 
   return {
     providers: providers.count || 0,
     buyers: buyers.count || 0,
     introductions: introductions.count || 0,
     territories: territories.count || 0,
-    mrr: 0, // Placeholder
+    mrr: activeCount * MONTHLY_RATE,
     openMatches: 0 // Placeholder
   };
 }

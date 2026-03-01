@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pen
         <div className="mb-4">
           <div className="flex justify-between items-end mb-1.5">
             <span className="font-mono text-[9px] text-text-muted uppercase tracking-wider">MRR</span>
-            <span className="font-mono text-[10px] text-accent-green">${mrr}</span>
+            <span className="font-mono text-[10px] text-accent-green">${mrr.toLocaleString()}</span>
           </div>
           <div className="h-1 bg-border-subtle rounded-full overflow-hidden">
             <div

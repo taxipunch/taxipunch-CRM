@@ -13,7 +13,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
     { label: 'Buyers Contacted', value: stats?.buyers || 0, icon: TrendingUp, color: 'text-accent-purple' },
     { label: 'Providers in Network', value: stats?.providers || 0, icon: Users, color: 'text-accent-orange' },
     { label: 'Territories Active', value: stats?.territories || 0, icon: Map, color: 'text-accent-yellow' },
-    { label: 'MRR', value: `$${stats?.mrr || 0}`, icon: DollarSign, color: 'text-accent-green' },
+    { label: 'MRR', value: `$${(stats?.mrr || 0).toLocaleString()}`, icon: DollarSign, color: 'text-accent-green' },
   ];
 
   return (
