@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'motion/react';
-import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { deleteProvider, deleteBuyer } from '../lib/queries';
 import { Provider, Buyer } from '../types';
 import { ProviderCard } from '../components/ProviderCard';
 
@@ -43,6 +44,17 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   }, [territoryId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleDeleteProvider = async (id: string) => {
+    await deleteProvider(id);
+    setProviders(prev => prev.filter(p => p.id !== id));
+    setUnassignedProviders(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleDeleteBuyer = async (id: string) => {
+    await deleteBuyer(id);
+    setBuyers(prev => prev.filter(b => b.id !== id));
+  };
 
   if (loading) return <div className="p-8 animate-pulse">Loading...</div>;
   if (error) return (
@@ -183,7 +195,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
               {providers.length > 0 ? providers.map(p => (
-                <ProviderCard key={p.id} provider={p} />
+                <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} />
               )) : (
                 <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
                   <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
@@ -193,16 +205,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
               {buyers.map(b => (
-                <div key={b.id} className="bg-bg-card border border-border-subtle p-4 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <h6 className="text-xl">{b.org_name}</h6>
-                    <span className="font-mono text-[10px] text-accent-blue uppercase">{b.stage}</span>
-                  </div>
-                  <div className="flex justify-between items-end">
-                    <span className="font-mono text-[10px] text-text-muted uppercase">Last: {b.last_contact ? new Date(b.last_contact).toLocaleDateString() : 'Never'}</span>
-                    <button className="text-accent-blue hover:underline font-mono text-[10px] uppercase">Log Contact</button>
-                  </div>
-                </div>
+                <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} />
               ))}
             </div>
           </div>
@@ -216,7 +219,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             {unassignedProviders.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {unassignedProviders.map(p => (
-                  <ProviderCard key={p.id} provider={p} />
+                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} />
                 ))}
               </div>
             ) : (
@@ -226,6 +229,51 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+};
+
+// Inline buyer card with delete confirmation
+const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void }> = ({ buyer, onDelete }) => {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div className="bg-bg-card border border-border-subtle p-4 rounded-lg group">
+      <div className="flex justify-between items-start mb-2">
+        <h6 className="text-xl">{buyer.org_name}</h6>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] text-accent-blue uppercase">{buyer.stage}</span>
+          {!confirming && (
+            <button
+              onClick={() => setConfirming(true)}
+              className="text-text-muted hover:text-accent-red transition-colors p-1 opacity-0 group-hover:opacity-100"
+              title="Delete buyer"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+      {confirming && (
+        <div className="flex items-center gap-3 mb-2 p-2 bg-accent-red/5 border border-accent-red/20 rounded-lg">
+          <span className="font-mono text-[10px] text-accent-red uppercase tracking-wider">Delete?</span>
+          <button
+            onClick={() => onDelete(buyer.id)}
+            className="px-3 py-1 bg-accent-red text-white font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/80 transition-colors"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      <div className="flex justify-between items-end">
+        <span className="font-mono text-[10px] text-text-muted uppercase">Last: {buyer.last_contact ? new Date(buyer.last_contact).toLocaleDateString() : 'Never'}</span>
+        <button className="text-accent-blue hover:underline font-mono text-[10px] uppercase">Log Contact</button>
       </div>
     </div>
   );

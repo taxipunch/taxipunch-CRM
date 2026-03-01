@@ -50,3 +50,13 @@ export async function getDashboardStats() {
     openMatches: 0 // Placeholder
   };
 }
+
+export async function deleteProvider(id: string) {
+  const { error } = await supabase.from('providers').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteBuyer(id: string) {
+  const { error } = await supabase.from('buyers').delete().eq('id', id);
+  if (error) throw error;
+}

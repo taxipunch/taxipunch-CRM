@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Provider } from '../types';
-import { Star, Phone, Globe, MapPin, ExternalLink } from 'lucide-react';
+import { Star, Phone, Globe, MapPin, ExternalLink, Trash2 } from 'lucide-react';
 
 interface ProviderCardProps {
   provider: Provider;
   onClick?: () => void;
+  onDelete?: (id: string) => void;
 }
 
 const QualityDots: React.FC<{ score: number }> = ({ score }) => (
@@ -19,11 +20,20 @@ const QualityDots: React.FC<{ score: number }> = ({ score }) => (
   </div>
 );
 
-export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick }) => {
+export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, onDelete }) => {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      await onDelete(provider.id);
+    }
+  };
+
   return (
     <div
       onClick={onClick}
-      className="bg-bg-card border border-border-subtle p-5 rounded-xl hover:bg-bg-card-hover hover:border-border-hover transition-all cursor-pointer group"
+      className="bg-bg-card border border-border-subtle p-5 rounded-xl hover:bg-bg-card-hover hover:border-border-hover transition-all cursor-pointer group relative"
     >
       {/* Header Row */}
       <div className="flex justify-between items-start mb-3">
@@ -36,10 +46,43 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick })
             </div>
           )}
         </div>
-        <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded ml-2 shrink-0">
-          {provider.niche}
-        </span>
+        <div className="flex items-center gap-2 ml-2 shrink-0">
+          <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
+            {provider.niche}
+          </span>
+          {onDelete && !confirmingDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}
+              className="text-text-muted hover:text-accent-red transition-colors p-1 opacity-0 group-hover:opacity-100"
+              title="Delete provider"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Inline Delete Confirmation */}
+      {confirmingDelete && (
+        <div
+          className="flex items-center gap-3 mb-3 p-2 bg-accent-red/5 border border-accent-red/20 rounded-lg"
+          onClick={e => e.stopPropagation()}
+        >
+          <span className="font-mono text-[10px] text-accent-red uppercase tracking-wider">Delete?</span>
+          <button
+            onClick={handleDelete}
+            className="px-3 py-1 bg-accent-red text-white font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/80 transition-colors"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false); }}
+            className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Reviews + Quality Row */}
       <div className="flex items-center gap-4 mb-3">
