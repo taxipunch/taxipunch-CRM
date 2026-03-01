@@ -9,10 +9,13 @@ interface ActionCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onNavigate?: (screen: string, context?: any) => void;
+  onComplete?: (id: string) => void;
 }
 
-export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onToggle, onNavigate }) => {
+export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onToggle, onNavigate, onComplete }) => {
   const [buttonState, setButtonState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [confirmingDone, setConfirmingDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAction = (callback?: () => void) => {
     if (buttonState !== 'idle') return;
@@ -23,6 +26,18 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
       setTimeout(() => setButtonState('idle'), 1500);
     }, 800);
   };
+
+  const handleComplete = async () => {
+    if (!onComplete) return;
+    setError(null);
+    try {
+      await onComplete(action.id);
+    } catch (err) {
+      setError('Failed to mark done');
+      setConfirmingDone(false);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'transcript_review': return <MessageSquare size={18} className="text-accent-blue" />;
@@ -49,7 +64,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
       isExpanded ? "ring-1 ring-border-active" : "hover:bg-bg-card-hover"
     )}>
       <div
-        className="p-4 flex items-center gap-4 cursor-pointer"
+        className="p-4 flex items-center gap-4 cursor-pointer group"
         onClick={onToggle}
       >
         <div className={cn("w-1 h-8 rounded-full", getPriorityColor(action.priority))} />
@@ -60,10 +75,48 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
           <h4 className="text-lg leading-tight">{action.title}</h4>
           <p className="text-text-secondary text-xs font-mono">{action.summary}</p>
         </div>
+
+        {/* Done button — two-stage confirmation */}
+        {onComplete && !confirmingDone && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmingDone(true); }}
+            className="text-text-muted hover:text-accent-green transition-colors p-1 opacity-0 group-hover:opacity-100"
+            title="Mark as done"
+          >
+            <Check size={16} />
+          </button>
+        )}
+
         <div className="text-text-faint">
           <ArrowRight size={16} className={cn("transition-transform", isExpanded ? "rotate-90" : "")} />
         </div>
       </div>
+
+      {/* Inline done confirmation */}
+      {confirmingDone && (
+        <div className="flex items-center gap-3 px-4 pb-3" onClick={e => e.stopPropagation()}>
+          <span className="font-mono text-[10px] text-accent-green uppercase tracking-wider">Done?</span>
+          <button
+            onClick={handleComplete}
+            className="px-3 py-1 bg-accent-green text-bg-base font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-green/80 transition-colors"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={() => setConfirmingDone(false)}
+            className="font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Inline error */}
+      {error && (
+        <div className="px-4 pb-3">
+          <span className="font-mono text-[10px] text-accent-red">{error}</span>
+        </div>
+      )}
 
       <AnimatePresence>
         {isExpanded && (

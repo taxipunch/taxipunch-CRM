@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw } from 'lucide-react';
-import { getActionItems } from '../lib/queries';
+import { getActionItems, markActionDone } from '../lib/queries';
 import { ActionItem } from '../types';
 import { cn } from '../lib/utils';
 import { ActionCard } from '../components/ActionCard';
@@ -33,6 +33,11 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleComplete = async (id: string) => {
+    await markActionDone(id);
+    setActions(prev => prev.filter(a => a.id !== id));
+  };
 
   const getFilteredCount = (filterId: string) => {
     if (filterId === 'ALL') return actions.length;
@@ -133,6 +138,7 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
                   isExpanded={expandedId === action.id}
                   onToggle={() => setExpandedId(expandedId === action.id ? null : action.id)}
                   onNavigate={navigate}
+                  onComplete={handleComplete}
                 />
               </motion.div>
             ))}

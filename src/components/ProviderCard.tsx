@@ -6,6 +6,7 @@ interface ProviderCardProps {
   provider: Provider;
   onClick?: () => void;
   onDelete?: (id: string) => void;
+  onLogContact?: (id: string) => void;
 }
 
 const QualityDots: React.FC<{ score: number }> = ({ score }) => (
@@ -20,8 +21,9 @@ const QualityDots: React.FC<{ score: number }> = ({ score }) => (
   </div>
 );
 
-export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, onDelete }) => {
+export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, onDelete, onLogContact }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,10 +104,10 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, o
         )}
         {provider.website_status && (
           <span className={`font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${provider.website_status === 'terrible'
-              ? 'text-accent-red/70 bg-accent-red/5'
-              : provider.website_status === 'good'
-                ? 'text-accent-green/70 bg-accent-green/5'
-                : 'text-text-muted bg-bg-surface'
+            ? 'text-accent-red/70 bg-accent-red/5'
+            : provider.website_status === 'good'
+              ? 'text-accent-green/70 bg-accent-green/5'
+              : 'text-text-muted bg-bg-surface'
             }`}>
             Site: {provider.website_status}
           </span>
@@ -161,12 +163,33 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onClick, o
         <span className="font-mono text-[10px] text-text-faint uppercase">
           Stage: {provider.stage}
         </span>
-        <span className="font-mono text-[10px] text-text-muted uppercase">
-          {provider.last_contact
-            ? `Last: ${new Date(provider.last_contact).toLocaleDateString()}`
-            : 'No contact yet'}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] text-text-muted uppercase">
+            {provider.last_contact
+              ? `Last: ${new Date(provider.last_contact).toLocaleDateString()}`
+              : 'No contact yet'}
+          </span>
+          {onLogContact && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  setContactError(null);
+                  await onLogContact(provider.id);
+                } catch {
+                  setContactError('Failed to log');
+                }
+              }}
+              className="text-accent-blue hover:underline font-mono text-[10px] uppercase"
+            >Log Contact</button>
+          )}
+        </div>
       </div>
+      {contactError && (
+        <div className="mt-1">
+          <span className="font-mono text-[10px] text-accent-red">{contactError}</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -64,3 +64,14 @@ export async function deleteBuyer(id: string) {
   const { error } = await supabase.from('buyers').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function markActionDone(id: string) {
+  const { error } = await supabase.from('action_items').update({ done: true }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function logContact(entityId: string, entityType: 'provider' | 'buyer') {
+  const table = entityType === 'provider' ? 'providers' : 'buyers';
+  const { error } = await supabase.from(table).update({ last_contact: new Date().toISOString() }).eq('id', entityId);
+  if (error) throw error;
+}

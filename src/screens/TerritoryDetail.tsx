@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { deleteProvider, deleteBuyer } from '../lib/queries';
+import { deleteProvider, deleteBuyer, logContact } from '../lib/queries';
 import { Provider, Buyer } from '../types';
 import { ProviderCard } from '../components/ProviderCard';
 
@@ -54,6 +54,19 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
   const handleDeleteBuyer = async (id: string) => {
     await deleteBuyer(id);
     setBuyers(prev => prev.filter(b => b.id !== id));
+  };
+
+  const handleLogProviderContact = async (id: string) => {
+    await logContact(id, 'provider');
+    const now = new Date().toISOString();
+    setProviders(prev => prev.map(p => p.id === id ? { ...p, last_contact: now } : p));
+    setUnassignedProviders(prev => prev.map(p => p.id === id ? { ...p, last_contact: now } : p));
+  };
+
+  const handleLogBuyerContact = async (id: string) => {
+    await logContact(id, 'buyer');
+    const now = new Date().toISOString();
+    setBuyers(prev => prev.map(b => b.id === id ? { ...b, last_contact: now } : b));
   };
 
   if (loading) return <div className="p-8 animate-pulse">Loading...</div>;
@@ -195,7 +208,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
               {providers.length > 0 ? providers.map(p => (
-                <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} />
+                <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
               )) : (
                 <div className="py-12 text-center border border-dashed border-border-subtle rounded-xl">
                   <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">No providers assigned</p>
@@ -205,7 +218,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             <div className="space-y-4">
               <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
               {buyers.map(b => (
-                <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} />
+                <BuyerCardWithDelete key={b.id} buyer={b} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
               ))}
             </div>
           </div>
@@ -219,7 +232,7 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             {unassignedProviders.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {unassignedProviders.map(p => (
-                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} />
+                  <ProviderCard key={p.id} provider={p} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                 ))}
               </div>
             ) : (
@@ -235,8 +248,9 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
 };
 
 // Inline buyer card with delete confirmation
-const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void }> = ({ buyer, onDelete }) => {
+const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => void; onLogContact: (id: string) => void }> = ({ buyer, onDelete, onLogContact }) => {
   const [confirming, setConfirming] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   return (
     <div className="bg-bg-card border border-border-subtle p-4 rounded-lg group">
       <div className="flex justify-between items-start mb-2">
@@ -273,8 +287,23 @@ const BuyerCardWithDelete: React.FC<{ buyer: Buyer; onDelete: (id: string) => vo
       )}
       <div className="flex justify-between items-end">
         <span className="font-mono text-[10px] text-text-muted uppercase">Last: {buyer.last_contact ? new Date(buyer.last_contact).toLocaleDateString() : 'Never'}</span>
-        <button className="text-accent-blue hover:underline font-mono text-[10px] uppercase">Log Contact</button>
+        <button
+          onClick={async () => {
+            try {
+              setContactError(null);
+              await onLogContact(buyer.id);
+            } catch {
+              setContactError('Failed to log');
+            }
+          }}
+          className="text-accent-blue hover:underline font-mono text-[10px] uppercase"
+        >Log Contact</button>
       </div>
+      {contactError && (
+        <div className="mt-1">
+          <span className="font-mono text-[10px] text-accent-red">{contactError}</span>
+        </div>
+      )}
     </div>
   );
 };
