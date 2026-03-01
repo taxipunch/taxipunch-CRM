@@ -58,7 +58,7 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto">
+    <div className="p-4 md:p-8 max-w-3xl mx-auto overflow-x-hidden w-full">
       <header className="mb-12">
         <h2 className="text-3xl md:text-5xl mb-2">Next Actions</h2>
         <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
       )}
 
       {/* Filters with counts */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide flex-nowrap">
         {filters.map(f => {
           const count = getFilteredCount(f.id);
           return (

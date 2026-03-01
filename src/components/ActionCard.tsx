@@ -60,20 +60,20 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
 
   return (
     <div className={cn(
-      "bg-bg-card border border-border-subtle rounded-xl overflow-hidden transition-all",
+      "bg-bg-card border border-border-subtle rounded-xl overflow-hidden transition-all w-full min-w-0",
       isExpanded ? "ring-1 ring-border-active" : "hover:bg-bg-card-hover"
     )}>
       <div
-        className="p-4 flex items-center gap-4 cursor-pointer group"
+        className="p-4 flex items-start gap-3 cursor-pointer group w-full min-w-0"
         onClick={onToggle}
       >
-        <div className={cn("w-1 h-8 rounded-full", getPriorityColor(action.priority))} />
-        <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
+        <div className={cn("w-1 h-8 rounded-full flex-shrink-0", getPriorityColor(action.priority))} />
+        <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle flex-shrink-0">
           {getIcon(action.type)}
         </div>
-        <div className="flex-1">
-          <h4 className="text-lg leading-tight">{action.title}</h4>
-          <p className="text-text-secondary text-xs font-mono">{action.summary}</p>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <h4 className="text-base leading-snug truncate">{action.title}</h4>
+          <p className="text-text-secondary text-xs font-mono line-clamp-2">{action.summary}</p>
         </div>
 
         {/* Done button — two-stage confirmation */}
@@ -87,7 +87,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
           </button>
         )}
 
-        <div className="text-text-faint">
+        <div className="text-text-faint flex-shrink-0 ml-2">
           <ArrowRight size={16} className={cn("transition-transform", isExpanded ? "rotate-90" : "")} />
         </div>
       </div>
@@ -124,18 +124,18 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-border-subtle bg-bg-surface/50 p-6"
+            className="border-t border-border-subtle bg-bg-surface/50 p-4 md:p-6 overflow-hidden"
           >
             {action.type === 'transcript_review' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-bg-card border border-border-subtle rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 bg-bg-card border border-border-subtle rounded-lg min-w-0">
                     <span className="font-mono text-[8px] text-text-muted uppercase block mb-1">Entity</span>
-                    <span className="text-sm">South Williamsport HOA</span>
+                    <span className="text-sm truncate block">South Williamsport HOA</span>
                   </div>
-                  <div className="p-3 bg-bg-card border border-border-subtle rounded-lg">
+                  <div className="p-3 bg-bg-card border border-border-subtle rounded-lg min-w-0">
                     <span className="font-mono text-[8px] text-text-muted uppercase block mb-1">Niches</span>
-                    <span className="text-sm">HVAC, Plumbing</span>
+                    <span className="text-sm truncate block">HVAC, Plumbing</span>
                   </div>
                 </div>
                 <textarea
@@ -160,19 +160,19 @@ export const ActionCard: React.FC<ActionCardProps> = ({ action, isExpanded, onTo
             )}
 
             {action.type === 'match_ready' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 p-4 bg-bg-card border border-border-subtle rounded-lg text-center">
+              <div className="space-y-6 overflow-hidden">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                  <div className="w-full md:flex-1 p-4 bg-bg-card border border-border-subtle rounded-lg text-center min-w-0">
                     <span className="font-mono text-[8px] text-text-muted uppercase block mb-1">Provider</span>
-                    <span className="text-lg">John's HVAC</span>
+                    <span className="text-lg truncate block">John's HVAC</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <div className="w-2 h-2 rounded-full bg-accent-green" />
                     <div className="w-2 h-2 rounded-full bg-accent-green" />
                   </div>
-                  <div className="flex-1 p-4 bg-bg-card border border-border-subtle rounded-lg text-center">
+                  <div className="w-full md:flex-1 p-4 bg-bg-card border border-border-subtle rounded-lg text-center min-w-0">
                     <span className="font-mono text-[8px] text-text-muted uppercase block mb-1">Buyer</span>
-                    <span className="text-lg">Loyalsock Mgmt</span>
+                    <span className="text-lg truncate block">Loyalsock Mgmt</span>
                   </div>
                 </div>
                 <button

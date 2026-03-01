@@ -85,7 +85,7 @@ export default function App() {
         mrr={mrr}
       />
 
-      <main className="flex-1 md:ml-[220px] pb-20 md:pb-0 min-h-screen relative">
+      <main className="flex-1 md:ml-[220px] pb-20 md:pb-0 min-h-screen relative overflow-x-hidden">
         {renderScreen()}
       </main>
 
