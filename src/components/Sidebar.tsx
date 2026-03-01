@@ -6,15 +6,16 @@ interface SidebarProps {
   currentScreen: string;
   onNavigate: (screen: string) => void;
   pendingActions: number;
+  pendingTranscripts: number;
   mrr: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pendingActions, mrr }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pendingActions, pendingTranscripts, mrr }) => {
   const navItems = [
     { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'TERRITORY_HEALTH', label: 'Territories', icon: Map },
     { id: 'NEXT_ACTIONS', label: 'Actions', icon: Inbox, badge: pendingActions },
-    { id: 'TRANSCRIPTS', label: 'Transcripts', icon: FileText },
+    { id: 'TRANSCRIPTS', label: 'Transcripts', icon: FileText, badge: pendingTranscripts },
     { id: 'ROADMAP', label: 'Roadmap', icon: Milestone },
   ];
 

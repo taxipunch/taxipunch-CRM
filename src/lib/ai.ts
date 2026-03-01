@@ -63,6 +63,28 @@ export async function extractTranscript(rawText: string, callType: string) {
   }
 }
 
+export async function extractTranscriptFields(rawText: string) {
+  const nullFields = { name: null, business_name: null, niche: null, phone: null, email: null, address: null, notes: null, entity_type: null };
+  try {
+    const response = await getAI().models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: `You are extracting structured data from a phone call transcript for a home services CRM in Williamsport PA. Return only valid JSON with no markdown, no backticks, no preamble.
+
+Extract these fields from the transcript: name, business_name, niche, phone, email, address, notes, entity_type (must be 'provider' or 'buyer'). Return null for any field not found.
+
+Transcript: ${rawText}`,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+    const parsed = JSON.parse(response.text || '{}');
+    return { ...nullFields, ...parsed };
+  } catch (error) {
+    console.error("Error extracting transcript fields:", error);
+    return nullFields;
+  }
+}
+
 export async function generateOneSheets(provider: any, buyer: any) {
   try {
     const response = await getAI().models.generateContent({

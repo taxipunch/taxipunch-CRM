@@ -9,7 +9,7 @@ import { ProviderDetail } from './screens/ProviderDetail';
 import { BuyerDetail } from './screens/BuyerDetail';
 import { AddProvider } from './screens/AddProvider';
 import { AddBuyer } from './screens/AddBuyer';
-import { getActionItems, getDashboardStats } from './lib/queries';
+import { getActionItems, getDashboardStats, getPendingTranscriptCount } from './lib/queries';
 
 // Lazy-load screens that import heavy/server-side dependencies
 const IntroduceFlow = React.lazy(() => import('./screens/IntroduceFlow').then(m => ({ default: m.IntroduceFlow })));
@@ -19,6 +19,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('DASHBOARD');
   const [screenContext, setScreenContext] = useState<any>({});
   const [pendingActions, setPendingActions] = useState(0);
+  const [pendingTranscripts, setPendingTranscripts] = useState(0);
   const [mrr, setMrr] = useState(0);
   const [showRoadmap, setShowRoadmap] = useState(false);
 
@@ -29,6 +30,8 @@ export default function App() {
         setPendingActions(actions.length);
         const stats = await getDashboardStats();
         setMrr(stats.mrr);
+        const tCount = await getPendingTranscriptCount();
+        setPendingTranscripts(tCount);
       } catch (error) {
         console.error("Failed to load global data:", error);
       }
@@ -78,6 +81,7 @@ export default function App() {
         currentScreen={currentScreen}
         onNavigate={navigate}
         pendingActions={pendingActions}
+        pendingTranscripts={pendingTranscripts}
         mrr={mrr}
       />
 

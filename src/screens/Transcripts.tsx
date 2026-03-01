@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, RefreshCw, Sparkles, Upload, X } from 'lucide-react';
-import { getTranscripts, updateTranscriptStatus, importTranscriptToCRM } from '../lib/queries';
-import { extractTranscript } from '../lib/ai';
+import { ChevronLeft, ChevronRight, RefreshCw, Loader2, Upload, Sparkles } from 'lucide-react';
+import { getTranscripts, updateTranscriptStatus } from '../lib/queries';
+import { extractTranscriptFields } from '../lib/ai';
+import { supabase } from '../lib/supabase';
+import { cn } from '../lib/utils';
+import { format } from 'date-fns';
 
 interface TranscriptsProps {
     navigate: (screen: string, context?: any) => void;
@@ -14,10 +17,19 @@ const STATUS_COLORS: Record<string, string> = {
     imported: 'text-accent-green border-accent-green/30 bg-accent-green/5',
 };
 
+const NICHES = ['Handyman', 'HVAC', 'Plumber', 'Cleaner', 'Electrician'];
+const FILTERS = [
+    { id: 'ALL', label: 'All' },
+    { id: 'pending', label: 'Pending' },
+    { id: 'reviewed', label: 'Reviewed' },
+    { id: 'imported', label: 'Imported' },
+];
+
+const FIELD_ORDER = ['name', 'business_name', 'niche', 'phone', 'email', 'address', 'notes', 'entity_type'] as const;
 const FIELD_LABELS: Record<string, string> = {
-    name: 'Contact Name',
+    name: 'Name',
     business_name: 'Business Name',
-    niche: 'Niche / Service',
+    niche: 'Niche',
     phone: 'Phone',
     email: 'Email',
     address: 'Address',
@@ -30,10 +42,15 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [filter, setFilter] = useState('ALL');
+
+    // Detail state
     const [extracting, setExtracting] = useState(false);
+    const [extractError, setExtractError] = useState<string | null>(null);
     const [extractedFields, setExtractedFields] = useState<Record<string, any> | null>(null);
     const [editedFields, setEditedFields] = useState<Record<string, any>>({});
     const [importing, setImporting] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
     const [importSuccess, setImportSuccess] = useState(false);
 
     const load = useCallback(async () => {
@@ -52,30 +69,37 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
 
     useEffect(() => { load(); }, [load]);
 
+    const pendingCount = transcripts.filter(t => (t.status || 'pending') === 'pending').length;
     const selected = transcripts.find(t => t.id === selectedId);
+
+    const filteredTranscripts = filter === 'ALL'
+        ? transcripts
+        : transcripts.filter(t => (t.status || 'pending') === filter);
+
+    const getFilterCount = (filterId: string) =>
+        filterId === 'ALL' ? transcripts.length : transcripts.filter(t => (t.status || 'pending') === filterId).length;
+
+    const resetDetail = () => {
+        setSelectedId(null);
+        setExtractedFields(null);
+        setEditedFields({});
+        setExtractError(null);
+        setImportError(null);
+        setImportSuccess(false);
+    };
 
     const handleExtract = async (transcript: any) => {
         setExtracting(true);
+        setExtractError(null);
         try {
-            const result = await extractTranscript(transcript.content, 'intake');
-            if (result) {
-                const fields = {
-                    name: result.contact_name || null,
-                    business_name: result.org_name || null,
-                    niche: result.niches?.[0] || null,
-                    phone: null,
-                    email: null,
-                    address: null,
-                    notes: result.summary || null,
-                    entity_type: result.entity_type || 'provider',
-                };
-                setExtractedFields(fields);
-                setEditedFields(fields);
-                await updateTranscriptStatus(transcript.id, 'reviewed');
-                setTranscripts(prev => prev.map(t => t.id === transcript.id ? { ...t, status: 'reviewed' } : t));
-            }
+            const fields = await extractTranscriptFields(transcript.content);
+            setExtractedFields(fields);
+            setEditedFields(fields);
+            await updateTranscriptStatus(transcript.id, 'reviewed');
+            setTranscripts(prev => prev.map(t => t.id === transcript.id ? { ...t, status: 'reviewed' } : t));
         } catch (err) {
             console.error('Extraction failed:', err);
+            setExtractError('Extraction failed. Check your API key and try again.');
         } finally {
             setExtracting(false);
         }
@@ -84,18 +108,44 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
     const handleImport = async () => {
         if (!selectedId || !editedFields.entity_type) return;
         setImporting(true);
+        setImportError(null);
         try {
-            await importTranscriptToCRM(selectedId, editedFields.entity_type as 'provider' | 'buyer', editedFields);
+            const entityType = editedFields.entity_type as 'provider' | 'buyer';
+            const table = entityType === 'provider' ? 'providers' : 'buyers';
+            const record: Record<string, any> = {};
+
+            if (entityType === 'provider') {
+                if (editedFields.name) record.name = editedFields.name;
+                if (editedFields.business_name) record.business_name = editedFields.business_name;
+                if (editedFields.niche) record.niche = editedFields.niche.toLowerCase();
+                if (editedFields.phone) record.phone = editedFields.phone;
+                if (editedFields.email) record.email = editedFields.email;
+                if (editedFields.address) record.address = editedFields.address;
+                record.stage = 'research';
+            } else {
+                if (editedFields.name) record.contact_name = editedFields.name;
+                if (editedFields.business_name) record.org_name = editedFields.business_name;
+                if (editedFields.phone) record.phone = editedFields.phone;
+                if (editedFields.email) record.email = editedFields.email;
+                record.stage = 'prospect';
+            }
+
+            const { data, error: insertErr } = await supabase.from(table).insert(record).select().single();
+            if (insertErr) throw insertErr;
+
+            // Link transcript to entity and mark imported
+            await supabase.from('transcripts').update({
+                status: 'imported',
+                entity_type: entityType,
+                entity_id: data.id,
+            }).eq('id', selectedId);
+
             setTranscripts(prev => prev.map(t => t.id === selectedId ? { ...t, status: 'imported' } : t));
             setImportSuccess(true);
-            setTimeout(() => {
-                setSelectedId(null);
-                setExtractedFields(null);
-                setEditedFields({});
-                setImportSuccess(false);
-            }, 1500);
-        } catch (err) {
+            setTimeout(() => resetDetail(), 1500);
+        } catch (err: any) {
             console.error('Import failed:', err);
+            setImportError(err.message || 'Import failed. Please try again.');
         } finally {
             setImporting(false);
         }
@@ -105,10 +155,23 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         setEditedFields(prev => ({ ...prev, [key]: value || null }));
     };
 
-    if (loading) return <div className="p-4 md:p-8 animate-pulse">Loading transcripts...</div>;
+    const inputClass = "w-full bg-bg-base border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-active transition-colors";
+    const labelClass = "font-mono text-[10px] uppercase text-text-muted tracking-widest block mb-1";
 
+    // Loading state
+    if (loading) return (
+        <div className="p-4 md:p-8 max-w-3xl mx-auto">
+            <div className="animate-pulse space-y-4">
+                <div className="h-10 w-48 bg-border-subtle rounded" />
+                <div className="h-4 w-32 bg-border-subtle rounded" />
+                <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 bg-border-subtle rounded-xl" />)}</div>
+            </div>
+        </div>
+    );
+
+    // Error state
     if (error) return (
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 max-w-3xl mx-auto">
             <div className="flex items-center justify-between p-4 bg-accent-red/5 border border-accent-red/20 rounded-xl">
                 <p className="text-sm text-accent-red">{error}</p>
                 <button onClick={load} className="flex items-center gap-2 px-4 py-1.5 bg-accent-red/10 text-accent-red font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-red/20 transition-colors">
@@ -118,12 +181,12 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         </div>
     );
 
-    // Detail view
+    // ── Detail view ──
     if (selected) {
         return (
             <div className="p-4 md:p-8 max-w-5xl mx-auto">
                 <button
-                    onClick={() => { setSelectedId(null); setExtractedFields(null); setEditedFields({}); }}
+                    onClick={resetDetail}
                     className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors mb-6"
                 >
                     <ChevronLeft size={16} />
@@ -137,115 +200,135 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left: Raw transcript */}
                     <div className="space-y-4">
                         <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest">Raw Transcript</h3>
-                        <div className="bg-bg-card border border-border-subtle rounded-xl p-4 max-h-[60vh] overflow-y-auto">
-                            <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">{selected.content}</p>
+                        <div className="bg-bg-base border border-border-subtle rounded-xl p-4 h-[500px] overflow-y-auto">
+                            <p className="text-sm font-mono text-text-secondary whitespace-pre-wrap leading-relaxed">{selected.content}</p>
                         </div>
                         <p className="font-mono text-[10px] text-text-muted uppercase">
-                            {new Date(selected.created_at).toLocaleString()}
+                            {format(new Date(selected.created_at), "MMM do · h:mm a")}
                         </p>
                     </div>
 
-                    {/* Right: Extracted fields */}
+                    {/* Right: AI Extraction */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest">Extracted Fields</h3>
-                            {!extractedFields && (
+                            <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest">AI Extraction</h3>
+                            {!extractedFields && !extracting && (
                                 <button
                                     onClick={() => handleExtract(selected)}
-                                    disabled={extracting}
-                                    className="flex items-center gap-2 px-4 py-2 bg-accent-blue/10 text-accent-blue font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-blue/20 transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-2 px-4 py-2 bg-accent-blue/10 text-accent-blue font-mono text-[10px] uppercase tracking-wider rounded-full hover:bg-accent-blue/20 transition-colors"
                                 >
                                     <Sparkles size={12} />
-                                    {extracting ? 'Extracting...' : 'Extract with AI'}
+                                    Extract Fields
                                 </button>
                             )}
                         </div>
 
+                        {/* Extraction error */}
+                        {extractError && (
+                            <div className="p-3 bg-accent-red/5 border border-accent-red/20 rounded-lg">
+                                <p className="font-mono text-[10px] text-accent-red">{extractError}</p>
+                            </div>
+                        )}
+
+                        {/* Loading spinner */}
                         {extracting && (
-                            <div className="bg-bg-card border border-border-subtle rounded-xl p-8 flex items-center justify-center">
+                            <div className="bg-bg-card border border-border-subtle rounded-xl p-12 flex items-center justify-center">
                                 <div className="flex items-center gap-3 text-text-muted">
-                                    <RefreshCw size={16} className="animate-spin" />
-                                    <span className="font-mono text-[10px] uppercase tracking-widest">AI is analyzing transcript...</span>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    <span className="font-mono text-[10px] uppercase tracking-widest">AI is analyzing transcript…</span>
                                 </div>
                             </div>
                         )}
 
+                        {/* Extracted fields form */}
                         {extractedFields && !extracting && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 className="bg-bg-card border border-border-subtle rounded-xl p-4 space-y-4"
                             >
-                                {Object.entries(FIELD_LABELS).map(([key, label]) => (
+                                {FIELD_ORDER.map(key => (
                                     <div key={key}>
-                                        <label className="font-mono text-[10px] text-text-muted uppercase tracking-widest block mb-1">
-                                            {label}
-                                        </label>
+                                        <label className={labelClass}>{FIELD_LABELS[key]}</label>
                                         {key === 'entity_type' ? (
-                                            <div className="flex gap-2">
-                                                {['provider', 'buyer'].map(type => (
-                                                    <button
-                                                        key={type}
-                                                        onClick={() => updateField('entity_type', type)}
-                                                        className={`px-4 py-2 rounded-lg font-mono text-[10px] uppercase tracking-wider transition-colors ${editedFields.entity_type === type
-                                                                ? 'bg-accent-green text-bg-base font-bold'
-                                                                : 'bg-bg-surface border border-border-subtle text-text-muted hover:text-text-primary'
-                                                            }`}
-                                                    >
-                                                        {type}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                            <select
+                                                value={editedFields.entity_type || 'provider'}
+                                                onChange={e => updateField('entity_type', e.target.value)}
+                                                className={inputClass}
+                                            >
+                                                <option value="provider">Provider</option>
+                                                <option value="buyer">Buyer</option>
+                                            </select>
+                                        ) : key === 'niche' ? (
+                                            <select
+                                                value={editedFields.niche || ''}
+                                                onChange={e => updateField('niche', e.target.value)}
+                                                className={inputClass}
+                                            >
+                                                <option value="">Select niche</option>
+                                                {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+                                            </select>
                                         ) : key === 'notes' ? (
                                             <textarea
                                                 value={editedFields[key] || ''}
                                                 onChange={e => updateField(key, e.target.value)}
                                                 rows={3}
-                                                className="w-full bg-bg-surface border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-active transition-colors resize-none"
+                                                className={`${inputClass} resize-none`}
+                                                placeholder={`Enter ${FIELD_LABELS[key].toLowerCase()}`}
                                             />
                                         ) : (
                                             <input
                                                 type="text"
                                                 value={editedFields[key] || ''}
                                                 onChange={e => updateField(key, e.target.value)}
-                                                className="w-full bg-bg-surface border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-active transition-colors"
-                                                placeholder={`Enter ${label.toLowerCase()}`}
+                                                className={inputClass}
+                                                placeholder={`Enter ${FIELD_LABELS[key].toLowerCase()}`}
                                             />
                                         )}
                                     </div>
                                 ))}
 
-                                <AnimatePresence>
+                                {/* Import error */}
+                                {importError && (
+                                    <div className="p-3 bg-accent-red/5 border border-accent-red/20 rounded-lg">
+                                        <p className="font-mono text-[10px] text-accent-red">{importError}</p>
+                                    </div>
+                                )}
+
+                                <AnimatePresence mode="wait">
                                     {importSuccess ? (
                                         <motion.div
+                                            key="success"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
-                                            className="w-full py-3 bg-accent-green/20 text-accent-green font-mono text-[10px] uppercase font-bold tracking-widest text-center rounded-xl"
+                                            className="w-full py-3 bg-accent-green/20 text-accent-green font-mono text-[10px] uppercase font-bold tracking-widest text-center rounded-full"
                                         >
                                             ✓ Imported Successfully
                                         </motion.div>
                                     ) : (
                                         <button
+                                            key="import"
                                             onClick={handleImport}
-                                            disabled={importing || !editedFields.entity_type}
-                                            className="w-full py-3 bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold tracking-widest rounded-xl hover:bg-accent-green/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            disabled={importing || !extractedFields}
+                                            className="w-full py-3 bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold tracking-widest rounded-full hover:bg-accent-green/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <Upload size={14} />
-                                            {importing ? 'Importing...' : 'Import to CRM'}
+                                            {importing ? 'Importing…' : 'Import to CRM'}
                                         </button>
                                     )}
                                 </AnimatePresence>
                             </motion.div>
                         )}
 
-                        {!extractedFields && !extracting && (
+                        {/* Empty state */}
+                        {!extractedFields && !extracting && !extractError && (
                             <div className="bg-bg-card border border-dashed border-border-subtle rounded-xl p-12 text-center">
                                 <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">
-                                    Click "Extract with AI" to analyze this transcript
+                                    Click "Extract Fields" to analyze this transcript
                                 </p>
                             </div>
                         )}
@@ -255,52 +338,80 @@ export const Transcripts: React.FC<TranscriptsProps> = ({ navigate }) => {
         );
     }
 
-    // List view
+    // ── List view ──
     return (
         <div className="p-4 md:p-8 max-w-3xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h2 className="text-2xl md:text-4xl mb-1">Transcripts</h2>
-                    <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">
-                        {transcripts.length} transcripts · {transcripts.filter(t => (t.status || 'pending') === 'pending').length} pending review
-                    </p>
+            <header className="mb-8">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-3xl md:text-5xl mb-2">Transcripts</h2>
+                        <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
+                            Voice Intake · {pendingCount} Pending
+                        </p>
+                    </div>
+                    <button
+                        onClick={load}
+                        className="p-2 rounded-lg bg-bg-card border border-border-subtle hover:bg-bg-card-hover transition-colors text-text-muted hover:text-text-primary"
+                    >
+                        <RefreshCw size={16} />
+                    </button>
                 </div>
-                <button
-                    onClick={load}
-                    className="p-2 rounded-lg bg-bg-card border border-border-subtle hover:bg-bg-card-hover transition-colors text-text-muted hover:text-text-primary"
-                >
-                    <RefreshCw size={16} />
-                </button>
+            </header>
+
+            {/* Filter pills */}
+            <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
+                {FILTERS.map(f => {
+                    const count = getFilterCount(f.id);
+                    const isActive = filter === f.id;
+                    return (
+                        <button
+                            key={f.id}
+                            onClick={() => setFilter(f.id)}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors border",
+                                isActive
+                                    ? "bg-accent-green/10 border-accent-green/30 text-accent-green font-bold"
+                                    : "bg-bg-card border-border-subtle text-text-muted hover:text-text-primary hover:border-border-active"
+                            )}
+                        >
+                            {f.label}
+                            <span className={cn(
+                                "text-[9px] px-1.5 py-0.5 rounded-full",
+                                isActive ? "bg-accent-green/20 text-accent-green" : "bg-bg-surface text-text-muted"
+                            )}>{count}</span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {transcripts.length === 0 ? (
+            {filteredTranscripts.length === 0 ? (
                 <div className="py-20 text-center border border-dashed border-border-subtle rounded-xl">
-                    <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No transcripts yet</p>
+                    <p className="font-mono text-xs text-text-muted uppercase tracking-widest">
+                        {filter === 'ALL' ? 'No transcripts yet' : `No ${filter} transcripts`}
+                    </p>
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {transcripts.map(t => (
+                    {filteredTranscripts.map(t => (
                         <button
                             key={t.id}
                             onClick={() => setSelectedId(t.id)}
-                            className="w-full text-left bg-bg-card border border-border-subtle rounded-xl p-4 hover:bg-bg-card-hover transition-colors group"
+                            className="w-full text-left bg-bg-card border border-border-subtle rounded-xl p-4 hover:bg-bg-card-hover hover:border-border-hover transition-all group"
                         >
                             <div className="flex justify-between items-start mb-2">
                                 <span className="font-mono text-[10px] text-text-muted uppercase">
-                                    {new Date(t.created_at).toLocaleString()}
+                                    {format(new Date(t.created_at), "MMM do · h:mm a")}
                                 </span>
-                                <span className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status || 'pending']}`}>
-                                    {t.status || 'pending'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status || 'pending']}`}>
+                                        {t.status || 'pending'}
+                                    </span>
+                                    <ChevronRight size={14} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
                             </div>
                             <p className="text-sm text-text-secondary line-clamp-2 group-hover:text-text-primary transition-colors">
-                                {t.content?.slice(0, 150)}{(t.content?.length || 0) > 150 ? '...' : ''}
+                                {t.content?.slice(0, 120)}{(t.content?.length || 0) > 120 ? '…' : ''}
                             </p>
-                            {t.summary && (
-                                <p className="font-mono text-[10px] text-text-muted mt-2 truncate">
-                                    Summary: {t.summary}
-                                </p>
-                            )}
                         </button>
                     ))}
                 </div>

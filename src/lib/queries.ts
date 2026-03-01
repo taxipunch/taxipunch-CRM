@@ -130,6 +130,12 @@ export async function updateTranscriptStatus(id: string, status: string) {
   if (error) throw error;
 }
 
+export async function getPendingTranscriptCount() {
+  const { count, error } = await supabase.from('transcripts').select('id', { count: 'exact' }).eq('status', 'pending');
+  if (error) throw error;
+  return count || 0;
+}
+
 export async function importTranscriptToCRM(
   transcriptId: string,
   entityType: 'provider' | 'buyer',
