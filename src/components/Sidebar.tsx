@@ -18,7 +18,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pen
   ];
 
   return (
-    <div className="w-full h-16 md:w-[220px] md:h-screen border-t md:border-t-0 md:border-r border-border-subtle flex flex-row md:flex-col bg-bg-surface fixed bottom-0 md:top-0 md:left-0 z-50">
+    <div
+      className="w-full h-16 md:w-[220px] md:h-screen border-t md:border-t-0 md:border-r border-border-subtle flex flex-row md:flex-col bg-bg-surface fixed bottom-0 md:top-0 md:left-0 z-50"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="hidden md:block px-5 py-6">
         <h1 className="text-lg leading-tight font-display text-text-secondary">
           Taxipunch<br />
