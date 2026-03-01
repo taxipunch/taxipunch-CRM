@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 let _ai: InstanceType<typeof GoogleGenAI> | null = null;
 function getAI() {
   if (!_ai) {
-    _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+    _ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
   }
   return _ai;
 }

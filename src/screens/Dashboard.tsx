@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardStats, getTopMatch } from '../lib/queries';
+import { generateMorningBrief } from '../lib/ai';
 import { format } from 'date-fns';
 import { RefreshCw } from 'lucide-react';
 import { MorningBrief } from '../components/MorningBrief';
@@ -23,14 +24,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
     setLoading(true);
     setError(null);
     try {
-      const [sData, bData, matchData] = await Promise.all([
+      const [sData, matchData] = await Promise.all([
         getDashboardStats(),
-        Promise.resolve("Yesterday was productive. 3 new transcripts reviewed."),
         getTopMatch(),
       ]);
       setStats(sData);
-      setBrief(bData);
       setTopMatch(matchData);
+
+      // Generate morning brief from AI with fallback
+      try {
+        const briefText = await generateMorningBrief(sData);
+        setBrief(briefText || `${sData.providers} providers · ${sData.buyers} buyers · $${sData.mrr.toLocaleString()} MRR`);
+      } catch {
+        setBrief(`${sData.providers} providers · ${sData.buyers} buyers · $${sData.mrr.toLocaleString()} MRR`);
+      }
     } catch (err) {
       console.error(err);
       setError("Couldn't load dashboard data. Check your connection and try again.");
