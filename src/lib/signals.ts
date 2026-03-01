@@ -1,15 +1,17 @@
+import { Territory } from '../types';
+
 export type NicheStatus = 'match' | 'gap' | 'orphan' | 'empty';
 
-export function computeTerritorySignals(territory: any, providers: any[], buyers: any[]) {
+export function computeTerritorySignals(territory: any, providers: any[], buyers: any[]): Territory {
   const niches = ['handyman', 'hvac', 'plumbing', 'cleaning', 'electrical'];
-  
+
   const territoryProviders = providers.filter(p => p.territory_id === territory.id);
   const territoryBuyers = buyers.filter(b => b.territory_id === territory.id);
 
   const nicheStatus = niches.map(niche => {
     const hasProvider = territoryProviders.some(p => p.niche === niche);
     const hasDemand = territoryBuyers.some(b => b.buyer_needs?.some((bn: any) => bn.niche === niche && !bn.filled));
-    
+
     let status: NicheStatus = 'empty';
     if (hasProvider && hasDemand) status = 'match';
     else if (!hasProvider && hasDemand) status = 'gap';
