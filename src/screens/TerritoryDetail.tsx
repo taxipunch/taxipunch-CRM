@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ArrowRight, ExternalLink, Phone, Mail, RefreshCw, Star, Trash2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { deleteProvider, deleteBuyer, logContact } from '../lib/queries';
 import { Provider, Buyer } from '../types';
@@ -380,7 +380,10 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
             {/* Desktop: existing 2-column layout */}
             <div className="hidden md:grid grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Providers</h5>
+                <div className="flex justify-between items-center mb-4">
+                  <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Providers</h5>
+                  <button onClick={() => navigate('ADD_PROVIDER', { territoryId: territory?.id })} className="flex items-center gap-1 font-mono text-[10px] text-accent-green uppercase tracking-wider hover:text-accent-green/80 transition-colors"><Plus size={12} /> Add</button>
+                </div>
                 {providers.length > 0 ? providers.map(p => (
                   <ProviderCard key={p.id} provider={p} onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })} onDelete={handleDeleteProvider} onLogContact={handleLogProviderContact} />
                 )) : (
@@ -390,7 +393,10 @@ export const TerritoryDetail: React.FC<TerritoryDetailProps> = ({ territoryId, n
                 )}
               </div>
               <div className="space-y-4">
-                <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest mb-4">Buyers</h5>
+                <div className="flex justify-between items-center mb-4">
+                  <h5 className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Buyers</h5>
+                  <button onClick={() => navigate('ADD_BUYER', { territoryId: territory?.id })} className="flex items-center gap-1 font-mono text-[10px] text-accent-green uppercase tracking-wider hover:text-accent-green/80 transition-colors"><Plus size={12} /> Add</button>
+                </div>
                 {buyers.map(b => (
                   <BuyerCardWithDelete key={b.id} buyer={b} onClick={() => navigate('BUYER_DETAIL', { buyerId: b.id })} onDelete={handleDeleteBuyer} onLogContact={handleLogBuyerContact} />
                 ))}

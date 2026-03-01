@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Plus } from 'lucide-react';
 import { getActionItems, markActionDone } from '../lib/queries';
 import { ActionItem } from '../types';
 import { cn } from '../lib/utils';
@@ -71,6 +71,10 @@ export const NextActions: React.FC<NextActionsProps> = ({ navigate, filterType }
               <span className="font-mono text-[10px] text-accent-red uppercase">{actions.filter(a => a.priority === 'high').length} High Priority</span>
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          <button onClick={() => navigate('ADD_PROVIDER')} className="flex items-center gap-1 px-3 py-1.5 bg-bg-card border border-border-subtle rounded-full font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-accent-green hover:border-accent-green/30 transition-colors"><Plus size={10} /> Provider</button>
+          <button onClick={() => navigate('ADD_BUYER')} className="flex items-center gap-1 px-3 py-1.5 bg-bg-card border border-border-subtle rounded-full font-mono text-[10px] text-text-muted uppercase tracking-wider hover:text-accent-green hover:border-accent-green/30 transition-colors"><Plus size={10} /> Buyer</button>
         </div>
       </header>
 
