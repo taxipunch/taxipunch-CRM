@@ -4,6 +4,7 @@ import { Dashboard } from './screens/Dashboard';
 import { TerritoryHealth } from './screens/TerritoryHealth';
 import { NextActions } from './screens/NextActions';
 import { TerritoryDetail } from './screens/TerritoryDetail';
+import { Transcripts } from './screens/Transcripts';
 import { getActionItems, getDashboardStats } from './lib/queries';
 
 // Lazy-load screens that import heavy/server-side dependencies
@@ -52,6 +53,8 @@ export default function App() {
         return <NextActions navigate={navigate} filterType={screenContext.filterType} />;
       case 'INTRODUCE_FLOW':
         return <Suspense fallback={null}><IntroduceFlow context={screenContext} navigate={navigate} /></Suspense>;
+      case 'TRANSCRIPTS':
+        return <Transcripts navigate={navigate} />;
       default:
         return <Dashboard navigate={navigate} />;
     }

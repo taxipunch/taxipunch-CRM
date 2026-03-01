@@ -124,3 +124,47 @@ export async function getMilestoneProgress() {
 
   return { activeProviders, engagedBuyers, introductions, mrr };
 }
+
+export async function updateTranscriptStatus(id: string, status: string) {
+  const { error } = await supabase.from('transcripts').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function importTranscriptToCRM(
+  transcriptId: string,
+  entityType: 'provider' | 'buyer',
+  fields: Record<string, any>
+) {
+  const table = entityType === 'provider' ? 'providers' : 'buyers';
+  const record: Record<string, any> = {};
+
+  if (entityType === 'provider') {
+    if (fields.name) record.name = fields.name;
+    if (fields.business_name) record.business_name = fields.business_name;
+    if (fields.niche) record.niche = fields.niche;
+    if (fields.phone) record.phone = fields.phone;
+    if (fields.email) record.email = fields.email;
+    if (fields.address) record.address = fields.address;
+    if (fields.notes) record.notes = fields.notes;
+    record.stage = 'research';
+  } else {
+    if (fields.name) record.contact_name = fields.name;
+    if (fields.business_name) record.org_name = fields.business_name;
+    if (fields.phone) record.phone = fields.phone;
+    if (fields.email) record.email = fields.email;
+    if (fields.notes) record.notes = fields.notes;
+    record.stage = 'prospect';
+  }
+
+  const { data, error } = await supabase.from(table).insert(record).select().single();
+  if (error) throw error;
+
+  // Link transcript to imported entity and mark as imported
+  await supabase.from('transcripts').update({
+    status: 'imported',
+    entity_type: entityType,
+    entity_id: data.id,
+  }).eq('id', transcriptId);
+
+  return data;
+}

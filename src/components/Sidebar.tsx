@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Map, Inbox, Milestone, LogOut, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Map, Inbox, Milestone, LogOut, TrendingUp, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface SidebarProps {
@@ -14,6 +14,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pen
     { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'TERRITORY_HEALTH', label: 'Territories', icon: Map },
     { id: 'NEXT_ACTIONS', label: 'Actions', icon: Inbox, badge: pendingActions },
+    { id: 'TRANSCRIPTS', label: 'Transcripts', icon: FileText },
     { id: 'ROADMAP', label: 'Roadmap', icon: Milestone },
   ];
 
