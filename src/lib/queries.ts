@@ -168,3 +168,24 @@ export async function importTranscriptToCRM(
 
   return data;
 }
+
+export async function saveOneSheet(providerId: string, buyerId: string, niche: string, oneSheet: string) {
+  // Try to find existing introduction
+  const { data: existing } = await supabase.from('introductions')
+    .select('id')
+    .eq('provider_id', providerId)
+    .eq('buyer_id', buyerId)
+    .eq('niche', niche)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('introductions')
+      .update({ one_sheet: oneSheet })
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('introductions')
+      .insert({ provider_id: providerId, buyer_id: buyerId, niche, one_sheet: oneSheet, status: 'draft' });
+    if (error) throw error;
+  }
+}

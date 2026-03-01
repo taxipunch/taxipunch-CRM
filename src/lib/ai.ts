@@ -87,3 +87,20 @@ export async function generateOneSheets(provider: any, buyer: any) {
     return { buyerOneSheet: "Error generating brief.", providerBrief: "Error generating brief." };
   }
 }
+
+export async function generateOneSheet(provider: any, buyer: any, niche: string) {
+  try {
+    const response = await getAI().models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: `You are writing a professional introduction brief for a local service marketplace in Williamsport PA. Be specific, warm, and concise. No corporate fluff.
+
+Write a one-page introduction brief connecting ${provider.business_name || provider.name} (${niche}) with ${buyer.org_name} (${buyer.units || 'unknown'} units, ${buyer.property_type || 'commercial'}). Include: a one paragraph intro for each party, why this match makes sense, and a suggested next step.
+
+Write in plain text, no markdown. Use line breaks between sections. Keep the tone professional but human.`,
+    });
+    return response.text || 'Unable to generate brief.';
+  } catch (error) {
+    console.error("Error generating one-sheet:", error);
+    return "Unable to generate brief. Please try again.";
+  }
+}
