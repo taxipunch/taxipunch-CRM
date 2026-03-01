@@ -108,3 +108,19 @@ export async function logContact(entityId: string, entityType: 'provider' | 'buy
   const { error } = await supabase.from(table).update({ last_contact: new Date().toISOString() }).eq('id', entityId);
   if (error) throw error;
 }
+
+export async function getMilestoneProgress() {
+  const MONTHLY_RATE = 297;
+  const [activeRes, engagedRes, introRes] = await Promise.all([
+    supabase.from('providers').select('id', { count: 'exact' }).eq('stage', 'active'),
+    supabase.from('buyers').select('id', { count: 'exact' }).neq('stage', 'prospect'),
+    supabase.from('introductions').select('id', { count: 'exact' }),
+  ]);
+
+  const activeProviders = activeRes.count || 0;
+  const engagedBuyers = engagedRes.count || 0;
+  const introductions = introRes.count || 0;
+  const mrr = activeProviders * MONTHLY_RATE;
+
+  return { activeProviders, engagedBuyers, introductions, mrr };
+}

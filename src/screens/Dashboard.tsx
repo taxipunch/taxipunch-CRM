@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getDashboardStats, getTopMatch } from '../lib/queries';
+import { getDashboardStats, getTopMatch, getMilestoneProgress } from '../lib/queries';
 import { generateMorningBrief } from '../lib/ai';
 import { format } from 'date-fns';
 import { RefreshCw } from 'lucide-react';
@@ -16,6 +16,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
   const [stats, setStats] = useState<any>(null);
   const [brief, setBrief] = useState<string>('');
   const [topMatch, setTopMatch] = useState<any>(null);
+  const [milestoneData, setMilestoneData] = useState<any>(null);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +25,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
     setLoading(true);
     setError(null);
     try {
-      const [sData, matchData] = await Promise.all([
+      const [sData, matchData, msData] = await Promise.all([
         getDashboardStats(),
         getTopMatch(),
+        getMilestoneProgress(),
       ]);
       setStats(sData);
       setTopMatch(matchData);
+      setMilestoneData(msData);
 
       // Generate morning brief from AI with fallback
       try {
@@ -109,8 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
       {/* Milestone Bar */}
       <section className="mb-8">
         <MilestoneBar
-          currentMilestone="First Provider Yes"
-          progress={33}
+          milestoneData={milestoneData || { activeProviders: 0, engagedBuyers: 0, introductions: 0, mrr: 0 }}
           onClick={() => navigate('ROADMAP')}
         />
       </section>

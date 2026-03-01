@@ -1,25 +1,48 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Milestone } from 'lucide-react';
 
-const MILESTONES = [
-  { id: 1, title: 'First site live', status: 'done' },
-  { id: 2, title: 'Pipeline loaded', status: 'done' },
-  { id: 3, title: 'First provider yes', status: 'current' },
-  { id: 4, title: 'First buyer conversation', status: 'upcoming' },
-  { id: 5, title: 'First intro made', status: 'upcoming' },
-  { id: 6, title: 'First MRR', status: 'upcoming' },
-  { id: 7, title: '$1K MRR', status: 'upcoming' },
-  { id: 8, title: '$5K MRR', status: 'upcoming' },
-  { id: 9, title: '$10K MRR', status: 'upcoming' },
+export interface MilestoneData {
+  activeProviders: number;
+  engagedBuyers: number;
+  introductions: number;
+  mrr: number;
+}
+
+const MILESTONE_DEFS = [
+  { id: 1, title: 'First site live', check: () => true }, // always done
+  { id: 2, title: 'Pipeline loaded', check: () => true }, // always done
+  { id: 3, title: 'First provider yes', check: (d: MilestoneData) => d.activeProviders >= 1 },
+  { id: 4, title: 'First introduction', check: (d: MilestoneData) => d.introductions >= 1 },
+  { id: 5, title: 'First MRR', check: (d: MilestoneData) => d.mrr > 0 },
+  { id: 6, title: '5 active providers', check: (d: MilestoneData) => d.activeProviders >= 5 },
+  { id: 7, title: '$1K MRR', check: (d: MilestoneData) => d.mrr >= 1000 },
+  { id: 8, title: '$5K MRR', check: (d: MilestoneData) => d.mrr >= 5000 },
+  { id: 9, title: '$10K MRR', check: (d: MilestoneData) => d.mrr >= 10000 },
 ];
 
+function computeMilestones(data: MilestoneData) {
+  let currentFound = false;
+  const milestones = MILESTONE_DEFS.map(m => {
+    const done = m.check(data);
+    if (done) return { ...m, status: 'done' as const };
+    if (!currentFound) { currentFound = true; return { ...m, status: 'current' as const }; }
+    return { ...m, status: 'upcoming' as const };
+  });
+  const currentIdx = milestones.findIndex(m => m.status === 'current');
+  const currentMilestone = currentIdx >= 0 ? milestones[currentIdx].title : 'All complete!';
+  const progress = currentIdx >= 0
+    ? Math.round((currentIdx / milestones.length) * 100)
+    : 100;
+  return { milestones, currentMilestone, progress };
+}
+
 interface MilestoneBarProps {
-  currentMilestone: string;
-  progress: number;
+  milestoneData: MilestoneData;
   onClick: () => void;
 }
 
-export const MilestoneBar: React.FC<MilestoneBarProps> = ({ currentMilestone, progress, onClick }) => {
+export const MilestoneBar: React.FC<MilestoneBarProps> = ({ milestoneData, onClick }) => {
+  const { milestones, currentMilestone, progress } = computeMilestones(milestoneData);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [longPressId, setLongPressId] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,7 +111,7 @@ export const MilestoneBar: React.FC<MilestoneBarProps> = ({ currentMilestone, pr
 
       {/* Milestone circles */}
       <div className="flex justify-between items-center px-1">
-        {MILESTONES.map((m) => (
+        {milestones.map((m) => (
           <div key={m.id} className="relative flex flex-col items-center">
             {/* Tooltip */}
             {visibleLabelId === m.id && (
@@ -100,10 +123,10 @@ export const MilestoneBar: React.FC<MilestoneBarProps> = ({ currentMilestone, pr
             {/* Circle */}
             <button
               className={`w-3 h-3 md:w-3.5 md:h-3.5 rounded-full transition-all ${m.status === 'done'
-                  ? 'bg-accent-green'
-                  : m.status === 'current'
-                    ? 'bg-accent-yellow shadow-[0_0_8px_rgba(255,193,7,0.4)]'
-                    : 'bg-bg-card border border-border-subtle'
+                ? 'bg-accent-green'
+                : m.status === 'current'
+                  ? 'bg-accent-yellow shadow-[0_0_8px_rgba(255,193,7,0.4)]'
+                  : 'bg-bg-card border border-border-subtle'
                 }`}
               onMouseEnter={() => setHoveredId(m.id)}
               onMouseLeave={() => setHoveredId(null)}
