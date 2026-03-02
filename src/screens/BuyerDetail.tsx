@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Phone, Mail, MapPin, Building2, RefreshCw, Trash2, Check, X } from 'lucide-react';
+import { ChevronLeft, Phone, Mail, MapPin, Building2, RefreshCw, Trash2, Check, X, StickyNote } from 'lucide-react';
 import { logContact, deleteBuyer } from '../lib/queries';
 import { supabase } from '../lib/supabase';
 
@@ -96,11 +96,10 @@ export const BuyerDetail: React.FC<BuyerDetailProps> = ({ buyerId, navigate }) =
     const filledCount = needs.filter((n: any) => n.filled).length;
 
     const stageColor: Record<string, string> = {
-        active: 'text-accent-green border-accent-green/30',
         prospect: 'text-accent-yellow border-accent-yellow/30',
-        negotiating: 'text-accent-blue border-accent-blue/30',
-        onboarded: 'text-accent-green border-accent-green/30',
-        churned: 'text-text-muted border-border-subtle',
+        contacted: 'text-accent-blue border-accent-blue/30',
+        interested: 'text-accent-purple border-accent-purple/30',
+        active: 'text-accent-green border-accent-green/30',
     };
 
     return (
@@ -200,6 +199,16 @@ export const BuyerDetail: React.FC<BuyerDetailProps> = ({ buyerId, navigate }) =
                             </a>
                         )}
                     </div>
+
+                    {/* Notes */}
+                    {buyer.notes && (
+                        <div className="bg-bg-card border border-border-subtle rounded-xl p-5 space-y-2">
+                            <h5 className="font-mono text-[10px] text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                <StickyNote size={12} /> Notes
+                            </h5>
+                            <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{buyer.notes}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: Activity & Actions */}

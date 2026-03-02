@@ -9,7 +9,7 @@ interface AddBuyerProps {
 }
 
 const PROPERTY_TYPES = ['HOA', 'Property Manager', 'Landlord'];
-const STAGES = ['prospect', 'negotiating', 'active', 'onboarded', 'churned'];
+const STAGES = ['prospect', 'contacted', 'interested', 'active'];
 const NICHES = ['Handyman', 'HVAC', 'Plumber', 'Cleaner', 'Electrician'];
 
 export const AddBuyer: React.FC<AddBuyerProps> = ({ navigate, defaultTerritoryId }) => {
@@ -170,8 +170,8 @@ export const AddBuyer: React.FC<AddBuyerProps> = ({ navigate, defaultTerritoryId
                                     type="button"
                                     onClick={() => toggleNeed(niche)}
                                     className={`px-4 py-2.5 rounded-lg font-mono text-[10px] uppercase tracking-wider transition-colors border ${selected
-                                            ? 'bg-accent-green/10 border-accent-green/30 text-accent-green font-bold'
-                                            : 'bg-bg-card border-border-subtle text-text-muted hover:text-text-primary hover:border-border-active'
+                                        ? 'bg-accent-green/10 border-accent-green/30 text-accent-green font-bold'
+                                        : 'bg-bg-card border-border-subtle text-text-muted hover:text-text-primary hover:border-border-active'
                                         }`}
                                 >
                                     {niche}

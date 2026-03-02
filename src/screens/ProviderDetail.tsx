@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Phone, Globe, MapPin, ExternalLink, Star, Trash2, RefreshCw } from 'lucide-react';
-import { logContact, deleteProvider } from '../lib/queries';
+import { ChevronLeft, Phone, Mail, Globe, MapPin, ExternalLink, Star, Trash2, RefreshCw, StickyNote } from 'lucide-react';
+import { logContact, deleteProvider, saveProviderOneSheet } from '../lib/queries';
+import { generateOneSheet } from '../lib/ai';
+import { OneSheetOutput } from '../components/OneSheetOutput';
 import { supabase } from '../lib/supabase';
 
 interface ProviderDetailProps {
@@ -20,6 +22,13 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
     const [error, setError] = useState<string | null>(null);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [contactLoading, setContactLoading] = useState(false);
+
+    // One-sheet state (must be before early returns per Rules of Hooks)
+    const [oneSheetContent, setOneSheetContent] = useState<string | null>(null);
+    const [oneSheetLoading, setOneSheetLoading] = useState(false);
+    const [oneSheetError, setOneSheetError] = useState<string | null>(null);
+    const [oneSheetCopied, setOneSheetCopied] = useState(false);
+    const [showOneSheet, setShowOneSheet] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -42,6 +51,13 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
     }, [providerId]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Sync one-sheet content from provider data after load
+    useEffect(() => {
+        if (provider?.one_sheet) {
+            setOneSheetContent(provider.one_sheet);
+        }
+    }, [provider?.one_sheet]);
 
     const handleLogContact = async () => {
         setContactLoading(true);
@@ -90,10 +106,44 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
     const overdue = isOverdue(provider.last_contact);
 
     const stageColor: Record<string, string> = {
+        prospect: 'text-accent-yellow border-accent-yellow/30',
+        contacted: 'text-accent-blue border-accent-blue/30',
+        negotiating: 'text-accent-purple border-accent-purple/30',
         active: 'text-accent-green border-accent-green/30',
-        research: 'text-accent-blue border-accent-blue/30',
-        trial: 'text-accent-yellow border-accent-yellow/30',
-        paused: 'text-text-muted border-border-subtle',
+        bench: 'text-text-secondary border-border-subtle',
+    };
+
+    const canGenerate = provider.stage === 'active' || provider.stage === 'bench';
+
+
+    const handleGenerateOneSheet = async () => {
+        setShowOneSheet(true);
+        setOneSheetLoading(true);
+        setOneSheetError(null);
+        try {
+            const template = provider.stage === 'bench' ? 'overflow_pitch' : 'provider_profile';
+            const result = await generateOneSheet({
+                template: template as any,
+                provider,
+                territory: territory?.name,
+                openBuyerCount: template === 'overflow_pitch' ? 0 : undefined,
+            });
+            setOneSheetContent(result);
+            await saveProviderOneSheet(provider.id, result);
+        } catch (err: any) {
+            setOneSheetError(err?.message || 'Failed to generate one-sheet');
+        } finally {
+            setOneSheetLoading(false);
+        }
+    };
+
+    const handleCopyOneSheet = async () => {
+        if (!oneSheetContent) return;
+        try {
+            await navigator.clipboard.writeText(oneSheetContent);
+            setOneSheetCopied(true);
+            setTimeout(() => setOneSheetCopied(false), 2000);
+        } catch { console.error('Copy failed'); }
     };
 
     const websiteColor: Record<string, string> = {
@@ -151,6 +201,13 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
                             <a href={`tel:${provider.phone}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-green transition-colors">
                                 <Phone size={14} className="shrink-0 text-text-muted" />
                                 <span>{provider.phone}</span>
+                            </a>
+                        )}
+
+                        {provider.email && (
+                            <a href={`mailto:${provider.email}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-blue transition-colors">
+                                <Mail size={14} className="shrink-0 text-text-muted" />
+                                <span>{provider.email}</span>
                             </a>
                         )}
 
@@ -222,6 +279,16 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
                             </div>
                         )}
                     </div>
+
+                    {/* Notes */}
+                    {provider.notes && (
+                        <div className="bg-bg-card border border-border-subtle rounded-xl p-5 space-y-2">
+                            <h5 className="font-mono text-[10px] text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                <StickyNote size={12} /> Notes
+                            </h5>
+                            <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{provider.notes}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: Status & Actions */}
@@ -271,6 +338,42 @@ export const ProviderDetail: React.FC<ProviderDetailProps> = ({ providerId, navi
                         >
                             {contactLoading ? 'Logging...' : 'Log Contact'}
                         </button>
+
+                        {/* One-Sheet Button */}
+                        {canGenerate ? (
+                            <button
+                                onClick={oneSheetContent && !showOneSheet
+                                    ? () => setShowOneSheet(true)
+                                    : handleGenerateOneSheet
+                                }
+                                className="w-full py-3 bg-bg-card border border-border-subtle text-text-secondary font-mono text-[10px] uppercase tracking-widest rounded-xl hover:border-accent-green/30 hover:text-accent-green transition-colors"
+                            >
+                                {oneSheetContent ? '● View One-Sheet' : '● Generate One-Sheet'}
+                            </button>
+                        ) : (
+                            <div className="relative group">
+                                <button
+                                    disabled
+                                    className="w-full py-3 bg-bg-card border border-border-subtle text-text-muted font-mono text-[10px] uppercase tracking-widest rounded-xl cursor-not-allowed opacity-50"
+                                >
+                                    ● One-Sheet
+                                </button>
+                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-card border border-border-subtle rounded-lg text-text-muted font-mono text-[9px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    available once active or bench
+                                </span>
+                            </div>
+                        )}
+
+                        {showOneSheet && (
+                            <OneSheetOutput
+                                content={oneSheetContent}
+                                loading={oneSheetLoading}
+                                error={oneSheetError}
+                                copied={oneSheetCopied}
+                                onRegenerate={handleGenerateOneSheet}
+                                onCopy={handleCopyOneSheet}
+                            />
+                        )}
 
                         {!confirmingDelete ? (
                             <button

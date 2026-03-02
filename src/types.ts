@@ -30,10 +30,15 @@ export interface Provider {
   quality_score?: number;
   current_website_url?: string;
   phone?: string;
+  email?: string;
   google_business_url?: string;
   website_status?: string;
   is_franchise?: boolean;
   is_disqualified?: boolean;
+  notes?: string;
+  source?: string;
+  website_built_url?: string;
+  one_sheet?: string;
 }
 
 export interface Buyer {
@@ -44,6 +49,10 @@ export interface Buyer {
   units: number;
   stage: string;
   last_contact: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  source?: string;
 }
 
 export interface ActionItem {

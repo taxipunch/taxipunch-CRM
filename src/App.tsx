@@ -9,6 +9,8 @@ import { ProviderDetail } from './screens/ProviderDetail';
 import { BuyerDetail } from './screens/BuyerDetail';
 import { AddProvider } from './screens/AddProvider';
 import { AddBuyer } from './screens/AddBuyer';
+import { ProvidersList } from './screens/ProvidersList';
+import { BuyersList } from './screens/BuyersList';
 import { getActionItems, getDashboardStats, getPendingTranscriptCount } from './lib/queries';
 
 // Lazy-load screens that import heavy/server-side dependencies
@@ -54,6 +56,10 @@ export default function App() {
         return <Dashboard navigate={navigate} />;
       case 'TERRITORY_HEALTH':
         return <TerritoryHealth navigate={navigate} />;
+      case 'PROVIDERS_LIST':
+        return <ProvidersList navigate={navigate} />;
+      case 'BUYERS_LIST':
+        return <BuyersList navigate={navigate} />;
       case 'TERRITORY_DETAIL':
         return <TerritoryDetail territoryId={screenContext.territoryId} navigate={navigate} />;
       case 'NEXT_ACTIONS':

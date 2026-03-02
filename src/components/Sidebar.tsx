@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Map, Inbox, Milestone, LogOut, FileText, ListChecks } from 'lucide-react';
+import { LayoutDashboard, Map, Inbox, Milestone, LogOut, FileText, ListChecks, Users, Building2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface SidebarProps {
@@ -14,14 +14,17 @@ interface SidebarProps {
 const MOBILE_NAV = [
   { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'TERRITORY_HEALTH', label: 'Territories', icon: Map },
+  { id: 'PROVIDERS_LIST', label: 'Providers', icon: Users },
+  { id: 'BUYERS_LIST', label: 'Buyers', icon: Building2 },
   { id: 'NEXT_ACTIONS', label: 'Actions', icon: ListChecks },
-  { id: 'TRANSCRIPTS', label: 'Transcripts', icon: FileText },
 ];
 
 // Desktop sidebar — full nav
 const DESKTOP_NAV = [
   { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'TERRITORY_HEALTH', label: 'Territories', icon: Map },
+  { id: 'PROVIDERS_LIST', label: 'Providers', icon: Users },
+  { id: 'BUYERS_LIST', label: 'Buyers', icon: Building2 },
   { id: 'NEXT_ACTIONS', label: 'Actions', icon: Inbox, badgeKey: 'actions' as const },
   { id: 'TRANSCRIPTS', label: 'Transcripts', icon: FileText, badgeKey: 'transcripts' as const },
   { id: 'ROADMAP', label: 'Roadmap', icon: Milestone },

@@ -9,7 +9,7 @@ interface AddProviderProps {
 }
 
 const NICHES = ['Handyman', 'HVAC', 'Plumber', 'Cleaner', 'Electrician'];
-const STAGES = ['research', 'outreach', 'trial', 'active', 'paused'];
+const STAGES = ['prospect', 'contacted', 'negotiating', 'active', 'bench'];
 
 export const AddProvider: React.FC<AddProviderProps> = ({ navigate, defaultTerritoryId }) => {
     const [territories, setTerritories] = useState<any[]>([]);
@@ -25,10 +25,11 @@ export const AddProvider: React.FC<AddProviderProps> = ({ navigate, defaultTerri
         address: '',
         current_website_url: '',
         google_business_url: '',
-        stage: 'research',
+        stage: 'prospect',
         territory_id: defaultTerritoryId || '',
         notes: '',
     });
+
 
     useEffect(() => {
         getTerritories().then(t => {
@@ -55,6 +56,7 @@ export const AddProvider: React.FC<AddProviderProps> = ({ navigate, defaultTerri
             if (form.address) record.address = form.address;
             if (form.current_website_url) record.current_website_url = form.current_website_url;
             if (form.google_business_url) record.google_business_url = form.google_business_url;
+            if (form.notes.trim()) record.notes = form.notes.trim();
             if (form.stage) record.stage = form.stage;
             if (form.territory_id) record.territory_id = form.territory_id;
 
@@ -150,6 +152,11 @@ export const AddProvider: React.FC<AddProviderProps> = ({ navigate, defaultTerri
                         <label className={labelClass}>Google Business URL</label>
                         <input type="url" value={form.google_business_url} onChange={e => update('google_business_url', e.target.value)} className={inputClass} placeholder="https://g.co/..." />
                     </div>
+                </div>
+
+                <div>
+                    <label className={labelClass}>Notes</label>
+                    <textarea value={form.notes} onChange={e => update('notes', e.target.value)} className={`${inputClass} min-h-[80px] resize-y`} placeholder="Any notes about this provider..." />
                 </div>
 
                 <button
