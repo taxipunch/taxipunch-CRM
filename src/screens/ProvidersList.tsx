@@ -97,11 +97,27 @@ export const ProvidersList: React.FC<ProvidersListProps> = ({ navigate }) => {
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto pb-20 md:pb-0">
             {/* Header */}
-            <header className="mb-8">
-                <h2 className="text-3xl md:text-5xl mb-2">Providers</h2>
-                <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
-                    {filtered.length} records · {filterTerritory !== 'all' ? territoryName(filterTerritory) : 'all territories'}
-                </p>
+            <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl md:text-5xl mb-2">Providers</h2>
+                    <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
+                        {filtered.length} records · {filterTerritory !== 'all' ? territoryName(filterTerritory) : 'all territories'}
+                    </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                    <button
+                        onClick={() => navigate('ADD_BUYER')}
+                        className="px-6 py-2.5 bg-bg-surface border border-border-subtle text-text-primary font-mono text-[10px] uppercase font-bold rounded-full tracking-widest hover:border-border-active transition-colors"
+                    >
+                        + Buyer
+                    </button>
+                    <button
+                        onClick={() => navigate('ADD_PROVIDER')}
+                        className="px-6 py-2.5 bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold rounded-full tracking-widest hover:bg-accent-green/90 transition-colors"
+                    >
+                        + Provider
+                    </button>
+                </div>
             </header>
 
             {/* Filter bar */}
@@ -153,7 +169,11 @@ export const ProvidersList: React.FC<ProvidersListProps> = ({ navigate }) => {
                     )}
 
                     {filtered.map(p => (
-                        <div key={p.id} className="bg-bg-card border border-border-subtle rounded-xl p-4">
+                        <div
+                            key={p.id}
+                            onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })}
+                            className="bg-bg-card border border-border-subtle rounded-xl p-4 cursor-pointer hover:border-border-active transition-colors"
+                        >
                             {/* Top: business name + niche */}
                             <div className="flex items-start justify-between gap-2 mb-1">
                                 <span className="text-base font-semibold text-text-primary">{p.business_name || p.name}</span>
@@ -173,6 +193,7 @@ export const ProvidersList: React.FC<ProvidersListProps> = ({ navigate }) => {
                             <div className="flex items-center gap-2 mb-3">
                                 <select
                                     value={p.stage}
+                                    onClick={e => e.stopPropagation()}
                                     onChange={e => handleStageChange(p.id, e.target.value)}
                                     className={`${selectClass} ${stageColor[p.stage] || 'text-text-primary'}`}
                                 >
@@ -193,7 +214,7 @@ export const ProvidersList: React.FC<ProvidersListProps> = ({ navigate }) => {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                 <button
                                     onClick={() => navigate('PROVIDER_DETAIL', { providerId: p.id })}
                                     className="text-text-secondary hover:text-text-primary font-mono text-[10px] uppercase tracking-wider transition-colors min-h-[44px]"

@@ -90,12 +90,18 @@ export async function getDashboardStats() {
 
 export async function deleteProvider(id: string) {
   const { error } = await supabase.from('providers').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    console.error('deleteProvider failed:', error);
+    throw error;
+  }
 }
 
 export async function deleteBuyer(id: string) {
   const { error } = await supabase.from('buyers').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    console.error('deleteBuyer failed:', error);
+    throw error;
+  }
 }
 
 export async function markActionDone(id: string) {

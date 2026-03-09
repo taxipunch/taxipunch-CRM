@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, pen
     <>
       {/* ── Mobile bottom nav bar ── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-base border-t border-border-subtle"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-surface border-t border-border-subtle"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-stretch justify-around">

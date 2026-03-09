@@ -1,21 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=DM+Mono:wght@300;400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Instrument Serif", serif;
+  --font-display: "Anton", sans-serif;
   --font-mono: "DM Mono", monospace;
-  --font-serif: "Georgia", serif;
+  --font-sans: "Inter", sans-serif;
 
   --color-bg-base: #060610;
-  --color-bg-surface: #08081a;
-  --color-bg-card: #0d0d20;
-  --color-bg-card-hover: #10101e;
-  --color-border-subtle: #111124;
-  --color-border-mid: #1a1a2e;
-  --color-border-active: #2a2a4a;
+  --color-bg-surface: #ffffff;
+  --color-bg-card: #f9fafb;
+  --color-bg-card-hover: #f3f4f6;
+  --color-border-subtle: #e5e7eb;
+  --color-border-mid: #d1d5db;
+  --color-border-active: #9ca3af;
   --color-text-primary: #e0e0f0;
   --color-text-secondary: #888888;
-  --color-text-muted: #444444;
+  --color-text-muted: #555555;
   --color-text-faint: #2a2a3a;
   --color-accent-green: #00e676;
   --color-accent-red: #ff4d2e;
@@ -27,11 +27,11 @@
 
 @layer base {
   body {
-    @apply bg-bg-base text-text-primary font-serif antialiased;
+    @apply bg-bg-base text-text-primary font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
+    @apply font-display tracking-wide font-normal;
   }
 
   .font-mono {
@@ -42,6 +42,15 @@
 /* Custom Utilities */
 @layer utilities {
   .glass {
-    @apply bg-bg-surface/80 backdrop-blur-md border border-border-subtle;
+    @apply bg-bg-surface/90 backdrop-blur-md border border-border-subtle;
+  }
+
+  /* Invert text colors when inside light surfaces */
+  .bg-bg-surface, .bg-bg-card, .glass {
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-muted: #6b7280;
+    --color-text-faint: #9ca3af;
+    color: var(--color-text-primary);
   }
 }

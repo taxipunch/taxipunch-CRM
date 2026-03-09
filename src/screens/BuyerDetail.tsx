@@ -21,6 +21,40 @@ export const BuyerDetail: React.FC<BuyerDetailProps> = ({ buyerId, navigate }) =
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [contactLoading, setContactLoading] = useState(false);
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState<any>(null);
+    const [saveLoading, setSaveLoading] = useState(false);
+
+    const handleEditToggle = () => {
+        if (!isEditing) setEditForm({ ...buyer });
+        setIsEditing(!isEditing);
+    };
+
+    const handleSave = async () => {
+        setSaveLoading(true);
+        try {
+            const payload = {
+                org_name: editForm.org_name,
+                contact_name: editForm.contact_name,
+                property_type: editForm.property_type,
+                units: editForm.units ? parseInt(editForm.units, 10) : null,
+                phone: editForm.phone,
+                email: editForm.email,
+                notes: editForm.notes,
+                stage: editForm.stage
+            };
+            const { error: err } = await supabase.from('buyers').update(payload).eq('id', buyerId);
+            if (err) throw err;
+            setBuyer((prev: any) => ({ ...prev, ...payload }));
+            setIsEditing(false);
+        } catch (err) {
+            console.error(err);
+            setError('Failed to save changes.');
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -114,25 +148,96 @@ export const BuyerDetail: React.FC<BuyerDetailProps> = ({ buyerId, navigate }) =
             </button>
 
             {/* Header */}
-            <header className="mb-8 md:mb-12">
-                <h2 className="text-3xl md:text-6xl mb-2">{buyer.org_name}</h2>
-                {buyer.contact_name && (
-                    <p className="text-text-secondary text-lg mb-3">{buyer.contact_name}</p>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                    {buyer.property_type && (
-                        <span className="font-mono text-[10px] text-accent-blue uppercase border border-accent-blue/30 px-2 py-0.5 rounded">
-                            {buyer.property_type}
-                        </span>
+            <header className="mb-8 md:mb-12 relative">
+                <div className="absolute right-0 top-0 flex gap-2">
+                    {isEditing ? (
+                        <>
+                            <button onClick={handleEditToggle} className="px-4 py-1.5 font-mono text-[10px] uppercase font-bold rounded-full text-text-muted hover:text-text-primary transition-colors hover:bg-bg-surface h-[32px] flex items-center justify-center">
+                                Cancel
+                            </button>
+                            <button onClick={handleSave} disabled={saveLoading} className="px-4 py-1.5 bg-accent-green text-bg-base font-mono text-[10px] uppercase font-bold rounded-full hover:bg-accent-green/90 transition-colors disabled:opacity-50 h-[32px] flex items-center justify-center">
+                                {saveLoading ? 'Saving...' : 'Save'}
+                            </button>
+                        </>
+                    ) : (
+                        <button onClick={handleEditToggle} className="px-4 py-1.5 bg-bg-surface border border-border-subtle text-text-primary hover:border-border-active transition-colors font-mono text-[10px] uppercase font-bold rounded-full h-[32px] flex items-center justify-center">
+                            Edit
+                        </button>
                     )}
-                    {buyer.units != null && (
-                        <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
-                            {buyer.units} units
-                        </span>
+                </div>
+
+                <div className="pr-[140px] md:pr-[180px]">
+                    {isEditing ? (
+                        <input
+                            value={editForm.org_name || ''}
+                            onChange={e => setEditForm({ ...editForm, org_name: e.target.value })}
+                            className="bg-bg-card border border-border-subtle rounded px-3 py-1.5 w-full text-3xl md:text-5xl mb-2 text-text-primary focus:outline-none focus:border-border-active"
+                            placeholder="Organization Name"
+                        />
+                    ) : (
+                        <h2 className="text-3xl md:text-6xl mb-2">{buyer.org_name}</h2>
                     )}
-                    <span className={`font-mono text-[10px] uppercase border px-2 py-0.5 rounded ${stageColor[buyer.stage] || 'text-text-muted border-border-subtle'}`}>
-                        {buyer.stage}
-                    </span>
+
+                    {isEditing ? (
+                        <input
+                            value={editForm.contact_name || ''}
+                            onChange={e => setEditForm({ ...editForm, contact_name: e.target.value })}
+                            className="bg-bg-card border border-border-subtle rounded px-3 py-1.5 w-full text-lg mb-3 text-text-secondary focus:outline-none focus:border-border-active"
+                            placeholder="Contact Name"
+                        />
+                    ) : (
+                        buyer.contact_name && <p className="text-text-secondary text-lg mb-3">{buyer.contact_name}</p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {isEditing ? (
+                            <>
+                                <select
+                                    value={editForm.property_type || ''}
+                                    onChange={e => setEditForm({ ...editForm, property_type: e.target.value })}
+                                    className="bg-bg-surface border border-border-subtle rounded px-2 py-1 font-mono text-[10px] uppercase text-text-primary focus:outline-none focus:border-border-active"
+                                >
+                                    <option value="">No Property Type</option>
+                                    <option value="HOA">HOA</option>
+                                    <option value="Property Manager">Property Manager</option>
+                                    <option value="Landlord">Landlord</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    value={editForm.units || ''}
+                                    onChange={e => setEditForm({ ...editForm, units: e.target.value })}
+                                    placeholder="Units"
+                                    className="bg-bg-surface border border-border-subtle rounded px-2 py-1 font-mono text-[10px] uppercase text-text-primary focus:outline-none focus:border-border-active w-24"
+                                />
+                                <select
+                                    value={editForm.stage || 'prospect'}
+                                    onChange={e => setEditForm({ ...editForm, stage: e.target.value })}
+                                    className="bg-bg-surface border border-border-subtle rounded px-2 py-1 font-mono text-[10px] uppercase text-text-primary focus:outline-none focus:border-border-active"
+                                >
+                                    <option value="prospect">Prospect</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="active">Active</option>
+                                </select>
+                            </>
+                        ) : (
+                            <>
+                                {buyer.property_type && (
+                                    <span className="font-mono text-[10px] text-accent-blue uppercase border border-accent-blue/30 px-2 py-0.5 rounded">
+                                        {buyer.property_type}
+                                    </span>
+                                )}
+                                {buyer.units != null && (
+                                    <span className="font-mono text-[10px] text-accent-green uppercase border border-accent-green/30 px-2 py-0.5 rounded">
+                                        {buyer.units} units
+                                    </span>
+                                )}
+                                <span className={`font-mono text-[10px] uppercase border px-2 py-0.5 rounded ${stageColor[buyer.stage] || 'text-text-muted border-border-subtle'}`}>
+                                    {buyer.stage}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
             </header>
 
@@ -178,35 +283,71 @@ export const BuyerDetail: React.FC<BuyerDetailProps> = ({ buyerId, navigate }) =
                     <div className="bg-bg-card border border-border-subtle rounded-xl p-5 space-y-4">
                         <h5 className="font-mono text-[10px] text-text-muted uppercase tracking-widest">Contact</h5>
 
-                        {buyer.contact_name && (
-                            <div className="flex items-center gap-3 text-sm text-text-secondary">
-                                <Building2 size={14} className="shrink-0 text-text-muted" />
-                                <span>{buyer.contact_name}</span>
+                        {isEditing ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <Phone size={14} className="shrink-0 text-text-muted" />
+                                    <input
+                                        type="tel"
+                                        value={editForm.phone || ''}
+                                        onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                                        placeholder="Phone number"
+                                        className="bg-bg-surface border border-border-subtle rounded px-3 py-1.5 w-full text-sm focus:outline-none focus:border-border-active"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Mail size={14} className="shrink-0 text-text-muted" />
+                                    <input
+                                        type="email"
+                                        value={editForm.email || ''}
+                                        onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                                        placeholder="Email address"
+                                        className="bg-bg-surface border border-border-subtle rounded px-3 py-1.5 w-full text-sm focus:outline-none focus:border-border-active"
+                                    />
+                                </div>
                             </div>
-                        )}
+                        ) : (
+                            <>
+                                {buyer.contact_name && (
+                                    <div className="flex items-center gap-3 text-sm text-text-secondary">
+                                        <Building2 size={14} className="shrink-0 text-text-muted" />
+                                        <span>{buyer.contact_name}</span>
+                                    </div>
+                                )}
 
-                        {buyer.phone && (
-                            <a href={`tel:${buyer.phone}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-green transition-colors">
-                                <Phone size={14} className="shrink-0 text-text-muted" />
-                                <span>{buyer.phone}</span>
-                            </a>
-                        )}
+                                {buyer.phone && (
+                                    <a href={`tel:${buyer.phone}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-green transition-colors">
+                                        <Phone size={14} className="shrink-0 text-text-muted" />
+                                        <span>{buyer.phone}</span>
+                                    </a>
+                                )}
 
-                        {buyer.email && (
-                            <a href={`mailto:${buyer.email}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-blue transition-colors">
-                                <Mail size={14} className="shrink-0 text-text-muted" />
-                                <span>{buyer.email}</span>
-                            </a>
+                                {buyer.email && (
+                                    <a href={`mailto:${buyer.email}`} className="flex items-center gap-3 text-sm text-text-secondary hover:text-accent-blue transition-colors">
+                                        <Mail size={14} className="shrink-0 text-text-muted" />
+                                        <span>{buyer.email}</span>
+                                    </a>
+                                )}
+                            </>
                         )}
                     </div>
 
                     {/* Notes */}
-                    {buyer.notes && (
+                    {(buyer.notes || isEditing) && (
                         <div className="bg-bg-card border border-border-subtle rounded-xl p-5 space-y-2">
                             <h5 className="font-mono text-[10px] text-text-muted uppercase tracking-widest flex items-center gap-2">
                                 <StickyNote size={12} /> Notes
                             </h5>
-                            <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{buyer.notes}</p>
+                            {isEditing ? (
+                                <textarea
+                                    value={editForm.notes || ''}
+                                    onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                                    placeholder="Add notes..."
+                                    className="bg-bg-surface border border-border-subtle rounded px-3 py-2 w-full text-sm min-h-[100px] focus:outline-none focus:border-border-active"
+                                />
+                            ) : (
+                                <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{buyer.notes}</p>
+                            )}
                         </div>
                     )}
                 </div>
