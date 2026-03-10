@@ -126,7 +126,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ navigate }) => {
             ))}
           </div>
         ) : (
-          <StatsGrid stats={stats} />
+          <StatsGrid
+            stats={stats}
+            onCardClick={(label) => {
+              switch (label) {
+                case 'Matches':
+                  navigate('NEXT_ACTIONS');
+                  break;
+                case 'Buyers':
+                  navigate('BUYERS_LIST');
+                  break;
+                case 'Providers':
+                case 'Relationships':
+                  navigate('PROVIDERS_LIST');
+                  break;
+                case 'Territories':
+                  navigate('TERRITORY_HEALTH');
+                  break;
+                case 'MRR':
+                  // No specific screen intended for MRR at the moment.
+                  break;
+              }
+            }}
+          />
         )}
       </section>
     </div>

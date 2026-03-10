@@ -4,9 +4,10 @@ import { cn } from '../lib/utils';
 
 interface StatsGridProps {
   stats: any;
+  onCardClick?: (label: string) => void;
 }
 
-export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
+export const StatsGrid: React.FC<StatsGridProps> = ({ stats, onCardClick }) => {
   const statItems = [
     { label: 'Relationships', value: (stats?.providers || 0) + (stats?.buyers || 0), icon: Users, color: 'text-accent-blue' },
     { label: 'Matches', value: stats?.openMatches || 0, icon: LinkIcon, color: 'text-accent-green' },
@@ -19,7 +20,14 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {statItems.map((item, i) => (
-        <div key={i} className="bg-bg-card border border-border-subtle p-4 rounded-xl hover:bg-bg-card-hover transition-colors min-w-0">
+        <button
+          key={i}
+          onClick={() => onCardClick?.(item.label)}
+          className={cn(
+            "bg-bg-card border border-border-subtle p-4 rounded-xl transition-colors min-w-0 text-left outline-none",
+            onCardClick ? "hover:bg-bg-card-hover cursor-pointer active:scale-[0.98]" : ""
+          )}
+        >
           <div className="flex justify-between items-start mb-3">
             <div className={cn("p-1.5 rounded-lg bg-bg-surface", item.color)}>
               <item.icon size={14} />
@@ -27,7 +35,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
           </div>
           <div className="text-2xl mb-0.5">{item.value}</div>
           <div className="font-mono text-[9px] text-text-muted uppercase tracking-widest leading-tight">{item.label}</div>
-        </div>
+        </button>
       ))}
     </div>
   );
