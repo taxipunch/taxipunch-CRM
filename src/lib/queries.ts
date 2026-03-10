@@ -37,6 +37,18 @@ export async function getTerritories() {
   return data;
 }
 
+export async function addTerritory(name: string, zone: string = 'Local') {
+  // Try to insert a simple territory. Any default signal is handled by the DB.
+  const { data, error } = await supabase
+    .from('territories')
+    .insert([{ name, zone }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getProviders() {
   const { data, error } = await supabase.from('providers').select('*');
   if (error) throw error;

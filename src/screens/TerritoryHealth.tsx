@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw } from 'lucide-react';
-import { getTerritories, getProviders, getBuyers } from '../lib/queries';
+import { RefreshCw, Plus, X } from 'lucide-react';
+import { getTerritories, getProviders, getBuyers, addTerritory } from '../lib/queries';
 import { computeTerritorySignals } from '../lib/signals';
 import { TerritoryCard } from '../components/TerritoryCard';
 import { Territory } from '../types';
@@ -15,6 +15,11 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Add Territory Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTerritoryName, setNewTerritoryName] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,6 +43,25 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
 
   useEffect(() => { load(); }, [load]);
 
+  const handleAddTerritory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTerritoryName.trim()) return;
+
+    setIsAdding(true);
+    setError(null);
+    try {
+      await addTerritory(newTerritoryName.trim());
+      setNewTerritoryName('');
+      setShowAddModal(false);
+      await load(); // Refresh the grid
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to add territory.');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const filteredTerritories = territories.filter(t =>
     filter === 'ALL' || t.signal === filter
   ).sort((a, b) => {
@@ -54,11 +78,20 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <header className="mb-12">
-        <h2 className="text-3xl md:text-5xl mb-2">Territory Health</h2>
-        <p className="text-text-secondary font-mono text-xs uppercase tracking-widest">
-          Strategic Overview · Flywheel Status
-        </p>
+      <header className="mb-12 flex items-start justify-between">
+        <div>
+          <h2 className="text-3xl md:text-5xl mb-2">Territory Health</h2>
+          <p className="text-text-secondary font-mono text-xs uppercase tracking-widest">
+            Strategic Overview · Flywheel Status
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-6 py-2.5 bg-accent-green hover:bg-accent-green/90 text-bg-base font-mono text-[10px] uppercase tracking-widest font-bold rounded-full transition-all hover:scale-105 active:scale-95 shadow-lg shadow-accent-green/20"
+        >
+          <Plus size={14} className="stroke-[3]" />
+          Territory
+        </button>
       </header>
 
       {/* Error State */}
@@ -131,6 +164,70 @@ export const TerritoryHealth: React.FC<TerritoryHealthProps> = ({ navigate }) =>
           <p className="font-mono text-xs text-text-muted uppercase tracking-widest">No territories match this filter</p>
         </div>
       )}
+
+      {/* Add Territory Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddModal(false)}
+              className="absolute inset-0 bg-bg-base/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-bg-surface border border-border-subtle rounded-2xl p-6 shadow-2xl"
+            >
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary rounded-full hover:bg-bg-card transition-colors"
+              >
+                <X size={16} />
+              </button>
+
+              <h3 className="text-2xl mb-2">New Territory</h3>
+              <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-6">
+                Create a new geographic zone
+              </p>
+
+              <form onSubmit={handleAddTerritory} className="space-y-4">
+                <div>
+                  <label className="font-mono text-[10px] uppercase text-text-muted mb-1 block">
+                    Territory Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTerritoryName}
+                    onChange={(e) => setNewTerritoryName(e.target.value)}
+                    placeholder="e.g. Greater Williamsport"
+                    required
+                    autoFocus
+                    className="w-full bg-bg-card border border-border-subtle rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-border-active transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isAdding || !newTerritoryName.trim()}
+                    className="w-full flex items-center justify-center gap-2 bg-text-primary text-bg-base font-mono text-[10px] uppercase font-bold rounded-full py-3 tracking-widest hover:bg-text-secondary transition-colors disabled:opacity-50"
+                  >
+                    {isAdding ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      'Save Territory'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

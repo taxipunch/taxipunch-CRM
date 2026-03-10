@@ -1,0 +1,29 @@
+commit a8885cf068cca32c81c9988bbcdd87f2a2d9d70a
+Author: taxipunch <taxipunch@users.noreply.github.com>
+Date:   Tue Mar 10 11:48:38 2026 -0400
+
+    feat: make dashboard cards clickable for navigation
+
+commit 2578f5b1d912977e344075b95af652ff946e8c40
+Author: taxipunch <taxipunch@users.noreply.github.com>
+Date:   Sun Mar 8 20:07:01 2026 -0400
+
+    feat: complete UI, font, and light theme updates
+
+commit bef9f29b9d54e5dda5db96a8f74672c965c2d1d7
+Author: taxipunch <taxipunch@users.noreply.github.com>
+Date:   Sun Mar 1 20:36:47 2026 -0500
+
+    feat: add providers/buyers list screens, milestone detail view, provider detail fixes
+
+commit 32df4f56594854487116d01eb1d3065e20d48e7c
+Author: taxipunch <taxipunch@users.noreply.github.com>
+Date:   Sun Mar 1 18:14:43 2026 -0500
+
+    feat: one-sheet generation UI on provider cards, buyer cards, and introduce flow
+
+commit 843741d5cf4b668a52e613dc73a72d1f294c76d4
+Author: taxipunch <taxipunch@users.noreply.github.com>
+Date:   Sun Mar 1 17:58:22 2026 -0500
+
+    feat: template-based one-sheet generation via Claude + save functions
